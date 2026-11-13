@@ -15,6 +15,13 @@
       "when": 1794612316385,
       "tag": "0001_fix_notebook_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794613705141,
+      "tag": "0002_seller_subscriptions_and_admin",
+      "breakpoints": true
     }
   ]
 }
