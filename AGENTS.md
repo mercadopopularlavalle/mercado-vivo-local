@@ -28,3 +28,10 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- Public listing reads go through server functions in `src/lib/listings.functions.ts` using a publishable server client; owner writes use the browser client under RLS — keeps SSR-friendly public pages and per-user permissions in the database.
+- Listing photos live in a private storage bucket and are shown via signed URLs; `image_url` holds either a bucket path or a `/images/seed/...` public path — the workspace blocks public buckets.
+- Seller profiles use plain UUID ids (no FK to auth users) so demo sellers can exist; a signup trigger creates the profile for real users.
+- Protected pages live under `src/routes/_authenticated/` (client-only gate redirecting to `/auth`).
