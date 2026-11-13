@@ -1,0 +1,100 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { CATEGORY_SLUGS } from "./categories";
+import { sanitizeSearch } from "./format";
+import { resolveImageUrls } from "./listing-images";
+import { createPublicServerClient, storageRewrite } from "./supabase-public.server";
+
+export type ListingSummary = {
+  id: string;
+  title: string;
+  price: number;
+  category: string;
+  location: string;
+  imageUrl: string | null;
+  createdAt: string;
+};
+
+export type ListingDetail = ListingSummary & {
+  description: string;
+  seller: { name: string; whatsapp: string | null; city: string | null };
+};
+
+export const listListings = createServerFn({ method: "GET" })
+  .inputValidator((input) =>
+    z
+      .object({
+        q: z.string().max(200).optional(),
+        category: z.enum(CATEGORY_SLUGS).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }): Promise<ListingSummary[]> => {
+    const supabase = createPublicServerClient();
+    let query = supabase
+      .from("listings")
+      .select("id, title, price, category, location, image_url, created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(60);
+
+    if (data.category) query = query.eq("category", data.category);
+    const term = data.q ? sanitizeSearch(data.q) : "";
+    if (term) {
+      query = query.or(
+        `title.ilike.%${term}%,description.ilike.%${term}%,location.ilike.%${term}%`,
+      );
+    }
+
+    const { data: rows, error } = await query;
+    if (error) throw new Error("No pudimos cargar los avisos");
+
+    const urls = await resolveImageUrls(
+      supabase,
+      rows.map((r) => r.image_url),
+      storageRewrite(),
+    );
+    return rows.map((r, i) => ({
+      id: r.id,
+      title: r.title,
+      price: Number(r.price),
+      category: r.category,
+      location: r.location,
+      imageUrl: urls[i] ?? null,
+      createdAt: r.created_at,
+    }));
+  });
+
+export const getListing = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }): Promise<ListingDetail | null> => {
+    const supabase = createPublicServerClient();
+    const { data: row, error } = await supabase
+      .from("listings")
+      .select(
+        "id, title, description, price, category, location, image_url, created_at, profiles(display_name, whatsapp, city)",
+      )
+      .eq("id", data.id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (error) throw new Error("No pudimos cargar el aviso");
+    if (!row) return null;
+
+    const [imageUrl] = await resolveImageUrls(supabase, [row.image_url], storageRewrite());
+    const profile = row.profiles as { display_name: string; whatsapp: string | null; city: string | null } | null;
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      price: Number(row.price),
+      category: row.category,
+      location: row.location,
+      imageUrl: imageUrl ?? null,
+      createdAt: row.created_at,
+      seller: {
+        name: profile?.display_name ?? "Vendedor",
+        whatsapp: profile?.whatsapp ?? null,
+        city: profile?.city ?? null,
+      },
+    };
+  });
