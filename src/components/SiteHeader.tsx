@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { LayoutList, LogOut, Plus, UserRound } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { LayoutList, LogOut, Plus, ShieldCheck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { isAdminQuery } from "@/lib/my-data";
 import { Logo } from "./Logo";
 
 export function SiteHeader() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: isAdmin } = useQuery({ ...isAdminQuery(user?.id ?? ""), enabled: !!user });
 
   async function handleSignOut() {
     await queryClient.cancelQueries();
@@ -41,7 +43,7 @@ export function SiteHeader() {
           >
             Mis publicaciones
           </Link>
-          <Button asChild variant="accent">
+          <Button asChild variant="cta">
             <Link to="/publicar">
               <Plus />
               <span>Publicar venta</span>
@@ -76,6 +78,13 @@ export function SiteHeader() {
                     <LayoutList className="size-4" /> Mis publicaciones
                   </Link>
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">
+                      <ShieldCheck className="size-4" /> Panel de administración
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={() => void handleSignOut()}>
                   <LogOut className="size-4" /> Cerrar sesión
                 </DropdownMenuItem>

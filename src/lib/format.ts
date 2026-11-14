@@ -40,3 +40,18 @@ export function sanitizeSearch(raw: string): string {
     .trim()
     .slice(0, 80);
 }
+
+/** Message a seller sends the admin after paying the monthly subscription. */
+export function buildPaymentNoticeLink(adminPhone: string, storeName: string, email: string): string {
+  const text = `¡Hola! Ya pagué la suscripción mensual de Mercado Popular. Mi tienda: ${storeName}. Mi cuenta: ${email}. ¿Me la habilitás?`;
+  return `https://wa.me/${normalizeWhatsapp(adminPhone)}?text=${encodeURIComponent(text)}`;
+}
+
+/** Accepts only absolute https links (e.g. a Mercado Pago subscription link). */
+export function isHttpsUrl(raw: string): boolean {
+  try {
+    return new URL(raw.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+}

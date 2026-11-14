@@ -13,10 +13,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, CATEGORY_SLUGS } from "@/lib/categories";
 import { isValidWhatsapp, normalizeWhatsapp } from "@/lib/format";
 import { LISTING_BUCKET } from "@/lib/listing-images";
-import { myProfileQuery, saveMyProfile } from "@/lib/my-data";
+import { appSettingsQuery, myProfileQuery, saveMyProfile } from "@/lib/my-data";
+import { InactiveStoreBanner } from "@/components/SubscriptionStatus";
 
 export const Route = createFileRoute("/_authenticated/publicar")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(myProfileQuery(context.user.id)),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(myProfileQuery(context.user.id)),
+      context.queryClient.ensureQueryData(appSettingsQuery()),
+    ]),
   head: () => ({
     meta: [
       { title: "Publicar venta — Mercado Popular" },
@@ -41,6 +46,20 @@ const listingSchema = z.object({
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function PublishPage() {
+  const { user } = Route.useRouteContext();
+  const { data: profile } = useSuspenseQuery(myProfileQuery(user.id));
+  if (!profile?.is_active) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        <h1 className="mb-6 text-3xl font-extrabold sm:text-4xl">Publicar venta</h1>
+        <InactiveStoreBanner profile={profile} email={user.email ?? ""} />
+      </div>
+    );
+  }
+  return <PublishForm />;
+}
+
+function PublishForm() {
   const { user } = Route.useRouteContext();
   const { data: profile } = useSuspenseQuery(myProfileQuery(user.id));
   const queryClient = useQueryClient();
@@ -223,7 +242,7 @@ function PublishPage() {
           />
         </div>
 
-        <Button type="submit" variant="accent" size="xl" className="w-full" disabled={busy}>
+        <Button type="submit" variant="cta" size="xl" className="w-full" disabled={busy}>
           {busy && <Loader2 className="animate-spin" />}
           Publicar venta
         </Button>

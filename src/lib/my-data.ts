@@ -2,7 +2,16 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveImageUrls } from "./listing-images";
 
-export type MyProfile = { display_name: string; whatsapp: string | null; city: string | null };
+export type MyProfile = {
+  display_name: string;
+  store_name: string | null;
+  whatsapp: string | null;
+  city: string | null;
+  is_active: boolean;
+};
+
+/** Fields a seller may edit on their own profile (activation is admin-only). */
+export type EditableProfile = Pick<MyProfile, "display_name" | "store_name" | "whatsapp" | "city">;
 
 export const myProfileQuery = (userId: string) =>
   queryOptions({
@@ -10,7 +19,7 @@ export const myProfileQuery = (userId: string) =>
     queryFn: async (): Promise<MyProfile | null> => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name, whatsapp, city")
+        .select("display_name, store_name, whatsapp, city, is_active")
         .eq("id", userId)
         .maybeSingle();
       if (error) throw error;
@@ -56,7 +65,7 @@ export const myListingsQuery = (userId: string) =>
   });
 
 /** Saves the seller profile, creating it if the signup trigger has not. */
-export async function saveMyProfile(userId: string, values: Partial<MyProfile>) {
+export async function saveMyProfile(userId: string, values: Partial<EditableProfile>) {
   const { data: existing } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
   if (existing) {
     const { error } = await supabase.from("profiles").update(values).eq("id", userId);
@@ -68,3 +77,35 @@ export async function saveMyProfile(userId: string, values: Partial<MyProfile>) 
     if (error) throw error;
   }
 }
+
+export const isAdminQuery = (userId: string) =>
+  queryOptions({
+    queryKey: ["is-admin", userId],
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+    staleTime: 60_000,
+  });
+
+export type AppSettings = { mercadopago_url: string | null; admin_whatsapp: string | null };
+
+export const appSettingsQuery = () =>
+  queryOptions({
+    queryKey: ["app-settings"],
+    queryFn: async (): Promise<AppSettings> => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("mercadopago_url, admin_whatsapp")
+        .maybeSingle();
+      if (error) throw error;
+      return data ?? { mercadopago_url: null, admin_whatsapp: null };
+    },
+    staleTime: 60_000,
+  });

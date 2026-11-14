@@ -109,8 +109,8 @@ function ListingPage() {
               <UserRound className="size-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Vendedor</p>
-              <p className="truncate font-semibold">{listing.seller.name}</p>
+              <p className="text-xs text-muted-foreground">{listing.seller.store ? "Tienda" : "Vendedor"}</p>
+              <p className="truncate font-semibold">{listing.seller.store ?? listing.seller.name}</p>
               {listing.seller.city && <p className="truncate text-xs text-muted-foreground">{listing.seller.city}</p>}
             </div>
           </div>

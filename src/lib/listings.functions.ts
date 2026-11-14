@@ -17,7 +17,7 @@ export type ListingSummary = {
 
 export type ListingDetail = ListingSummary & {
   description: string;
-  seller: { name: string; whatsapp: string | null; city: string | null };
+  seller: { name: string; store: string | null; whatsapp: string | null; city: string | null };
 };
 
 export const listListings = createServerFn({ method: "GET" })
@@ -72,7 +72,7 @@ export const getListing = createServerFn({ method: "GET" })
     const { data: row, error } = await supabase
       .from("listings")
       .select(
-        "id, title, description, price, category, location, image_url, created_at, profiles(display_name, whatsapp, city)",
+        "id, title, description, price, category, location, image_url, created_at, profiles(display_name, store_name, whatsapp, city)",
       )
       .eq("id", data.id)
       .eq("status", "active")
@@ -81,7 +81,12 @@ export const getListing = createServerFn({ method: "GET" })
     if (!row) return null;
 
     const [imageUrl] = await resolveImageUrls(supabase, [row.image_url], storageRewrite());
-    const profile = row.profiles as { display_name: string; whatsapp: string | null; city: string | null } | null;
+    const profile = row.profiles as {
+      display_name: string;
+      store_name: string | null;
+      whatsapp: string | null;
+      city: string | null;
+    } | null;
     return {
       id: row.id,
       title: row.title,
@@ -93,6 +98,7 @@ export const getListing = createServerFn({ method: "GET" })
       createdAt: row.created_at,
       seller: {
         name: profile?.display_name ?? "Vendedor",
+        store: profile?.store_name ?? null,
         whatsapp: profile?.whatsapp ?? null,
         city: profile?.city ?? null,
       },

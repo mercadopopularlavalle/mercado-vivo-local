@@ -56,7 +56,7 @@ function Home() {
       <section className="bg-hero text-primary-foreground">
         <div className="mx-auto max-w-6xl px-4 pb-14 pt-10 sm:pt-14">
           <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.05] sm:text-5xl">
-            Lo que buscás, <span className="text-accent">a la vuelta de tu casa.</span>
+            Lo que buscás, <span className="text-highlight">a la vuelta de tu casa.</span>
           </h1>
           <p className="mt-3 max-w-xl text-primary-foreground/80">
             Comprá y vendé entre vecinos. Sin vueltas: hablás directo con quien vende.
@@ -122,7 +122,7 @@ function Home() {
                   Ver todo
                 </Link>
               </Button>
-              <Button asChild variant="accent">
+              <Button asChild variant="cta">
                 <Link to="/publicar">Publicar venta</Link>
               </Button>
             </div>
