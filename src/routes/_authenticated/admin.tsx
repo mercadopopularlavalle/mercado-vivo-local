@@ -75,7 +75,8 @@ function AdminPage() {
         <Stat icon={<UserX className="size-5" />} label="Inactivos" value={sellers.length - active} />
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="mt-8 space-y-8">
+        <SettingsCard />
         <section className="overflow-hidden rounded-3xl border bg-card">
           <div className="overflow-x-auto">
             <Table>
@@ -96,7 +97,6 @@ function AdminPage() {
             </Table>
           </div>
         </section>
-        <SettingsCard />
       </div>
     </div>
   );
@@ -237,12 +237,12 @@ function SettingsCard() {
   }
 
   return (
-    <aside className="h-fit rounded-3xl border bg-card p-6 lg:sticky lg:top-24">
+    <aside className="rounded-3xl border bg-card p-6">
       <h2 className="text-lg font-bold">Cobro de la suscripción</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Esto ven los vendedores con la tienda inactiva.
       </p>
-      <form onSubmit={submit} className="mt-5 space-y-4">
+      <form onSubmit={submit} className="mt-5 grid gap-4 md:grid-cols-[2fr_1fr_auto] md:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="mp">Link de suscripción de Mercado Pago</Label>
           <Input
@@ -257,7 +257,7 @@ function SettingsCard() {
           <Label htmlFor="wa">Tu WhatsApp para avisos de pago</Label>
           <Input id="wa" name="wa" inputMode="tel" defaultValue={settings.admin_whatsapp ?? ""} placeholder="5491155550101" />
         </div>
-        <Button type="submit" className="w-full" disabled={busy}>
+        <Button type="submit" className="w-full md:w-auto" disabled={busy}>
           Guardar configuración
         </Button>
       </form>
