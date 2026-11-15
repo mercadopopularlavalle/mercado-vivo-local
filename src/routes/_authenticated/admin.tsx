@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, isHttpsUrl, isValidWhatsapp, normalizeWhatsapp } from "@/lib/format";
 import { appSettingsQuery } from "@/lib/my-data";
+import { AdminAccessCard, adminsQuery } from "@/components/AdminAccessCard";
 import { cn } from "@/lib/utils";
 
 type Seller = {
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
     Promise.all([
       context.queryClient.ensureQueryData(sellersQuery()),
       context.queryClient.ensureQueryData(appSettingsQuery()),
+      context.queryClient.ensureQueryData(adminsQuery()),
     ]),
   head: () => ({
     meta: [
@@ -62,6 +64,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function AdminPage() {
   const { data: sellers } = useSuspenseQuery(sellersQuery());
+  const { user } = Route.useRouteContext();
   const active = sellers.filter((s) => s.is_active).length;
 
   return (
@@ -97,6 +100,7 @@ function AdminPage() {
             </Table>
           </div>
         </section>
+        <AdminAccessCard currentUserId={user.id} />
       </div>
     </div>
   );

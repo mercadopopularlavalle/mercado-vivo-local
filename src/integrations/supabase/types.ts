@@ -144,6 +144,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_grant_admin: { Args: { _email: string }; Returns: string }
+      admin_list_admins: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          granted_at: string
+          user_id: string
+        }[]
+      }
       admin_list_sellers: {
         Args: never
         Returns: {
@@ -159,6 +169,7 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      admin_revoke_admin: { Args: { _user_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
