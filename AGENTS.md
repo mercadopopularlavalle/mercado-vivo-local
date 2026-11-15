@@ -35,5 +35,5 @@ use the editor.
 - Listing photos live in a private storage bucket and are shown via signed URLs; `image_url` holds either a bucket path or a `/images/seed/...` public path — the workspace blocks public buckets.
 - Seller profiles use plain UUID ids (no FK to auth users) so demo sellers can exist; a signup trigger creates the profile for real users.
 - Protected pages live under `src/routes/_authenticated/` (client-only gate redirecting to `/auth`).
-- Roles live in `user_roles` checked via `has_role()`; seller `is_active` on profiles is changeable only by admins (DB trigger) and gates public listing visibility and listing inserts in RLS — enforcement stays in the database, not the UI.
+- Roles live in `user_roles` checked via `has_role()` and are granted/revoked only through admin-checked security-definer RPCs (no self-revoke, never zero admins); seller `is_active` on profiles is changeable only by admins (DB trigger) and gates public listing visibility and listing inserts in RLS — enforcement stays in the database, not the UI.
 - Subscription payment link and admin WhatsApp live in the single-row `app_settings` table, edited from /admin — no code change needed to update them.
