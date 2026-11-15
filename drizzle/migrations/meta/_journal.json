@@ -29,6 +29,13 @@
       "when": 1794753260709,
       "tag": "0003_tighten_profiles_settings_photos_access",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794753560090,
+      "tag": "0004_admin_email_on_signup",
+      "breakpoints": true
     }
   ]
 }
