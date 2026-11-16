@@ -1,4 +1,15 @@
-import { Car, Shirt, Smartphone, Sofa, UtensilsCrossed, Wrench, type LucideIcon } from "lucide-react";
+import {
+  Car,
+  Fish,
+  Gift,
+  Shirt,
+  Smartphone,
+  Sofa,
+  Sparkles,
+  UtensilsCrossed,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 
 export const CATEGORIES = [
   { slug: "hogar", label: "Hogar", icon: Sofa },
@@ -7,6 +18,9 @@ export const CATEGORIES = [
   { slug: "servicios", label: "Servicios", icon: Wrench },
   { slug: "electronica", label: "Electrónica", icon: Smartphone },
   { slug: "vehiculos", label: "Vehículos", icon: Car },
+  { slug: "art-pesca", label: "Art. de pesca", icon: Fish },
+  { slug: "art-limpieza", label: "Art. de limpieza", icon: Sparkles },
+  { slug: "art-navidad", label: "Art. de Navidad", icon: Gift },
 ] as const satisfies ReadonlyArray<{ slug: string; label: string; icon: LucideIcon }>;
 
 export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
