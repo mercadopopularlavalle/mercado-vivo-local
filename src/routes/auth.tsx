@@ -21,10 +21,10 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Acceso Comerciantes â€” Mercado Popular" },
-      { name: "description", content: "IngresÃ¡ o creÃ¡ tu cuenta comercial para administrar tu tienda e inventario en Mercado Popular." },
-      { property: "og:title", content: "Acceso Comerciantes â€” Mercado Popular" },
-      { property: "og:description", content: "IngresÃ¡ o creÃ¡ tu cuenta comercial en Mercado Popular." },
+      { title: "Acceso Comerciantes — Mercado Popular" },
+      { name: "description", content: "Ingresá o creá tu cuenta comercial para administrar tu tienda e inventario en Mercado Popular." },
+      { property: "og:title", content: "Acceso Comerciantes — Mercado Popular" },
+      { property: "og:description", content: "Ingresá o creá tu cuenta comercial en Mercado Popular." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -57,10 +57,10 @@ function AuthPage() {
     });
     setBusy(false);
     if (error) {
-      toast.error(error.message.includes("Invalid") ? "Email o contraseÃ±a incorrectos" : error.message);
+      toast.error(error.message.includes("Invalid") ? "Email o contraseña incorrectos" : error.message);
       return;
     }
-    toast.success("Â¡Bienvenido a tu panel de tienda!");
+    toast.success("¡Bienvenido a tu panel de tienda!");
   }
 
   async function handleSignup(e: FormEvent<HTMLFormElement>) {
@@ -73,12 +73,12 @@ function AuthPage() {
     const whatsapp = String(form.get("whatsapp") || "").trim();
 
     if (password.length < 6) {
-      toast.error("La contraseÃ±a debe tener al menos 6 caracteres");
+      toast.error("La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
     if (whatsapp && !isValidWhatsapp(whatsapp)) {
-      toast.error("IngresÃ¡ un WhatsApp vÃ¡lido con cÃ³digo de paÃ­s (ej. 5491155550101)");
+      toast.error("Ingresá un WhatsApp válido con código de país (ej. 5491155550101)");
       return;
     }
 
@@ -120,7 +120,7 @@ function AuthPage() {
     if (!data.session) {
       setSentTo(email);
     } else {
-      toast.success("Â¡Cuenta de comercio creada con Ã©xito!");
+      toast.success("¡Cuenta de comercio creada con éxito!");
     }
   }
 
@@ -159,10 +159,10 @@ function AuthPage() {
         {sentTo ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <MailCheck className="size-10 text-primary" />
-            <h1 className="text-2xl font-bold">RevisÃ¡ tu email</h1>
+            <h1 className="text-2xl font-bold">Revisá tu email</h1>
             <p className="text-sm text-muted-foreground">
               Te enviamos un enlace a <strong className="text-foreground">{sentTo}</strong>.{" "}
-              {mode === "forgot" ? "Abrilo para crear una nueva contraseÃ±a." : "Abrilo para confirmar tu cuenta y habilitar tu tienda."}
+              {mode === "forgot" ? "Abrilo para crear una nueva contraseña." : "Abrilo para confirmar tu cuenta y habilitar tu tienda."}
             </p>
             <Button variant="outline" className="mt-2" onClick={() => { setSentTo(null); setMode("login"); }}>
               Volver a ingresar
@@ -170,7 +170,7 @@ function AuthPage() {
           </div>
         ) : mode === "forgot" ? (
           <form onSubmit={handleForgot} className="space-y-4">
-            <h1 className="text-2xl font-bold">Recuperar contraseÃ±a</h1>
+            <h1 className="text-2xl font-bold">Recuperar contraseña</h1>
             <p className="text-sm text-muted-foreground">Te enviaremos un enlace para crear una nueva.</p>
             <Field id="forgot-email" name="email" label="Email de tu comercio" type="email" autoComplete="email" />
             <Button type="submit" className="h-11 w-full" disabled={busy}>
@@ -188,7 +188,7 @@ function AuthPage() {
               </span>
               <div>
                 <h1 className="text-2xl font-bold leading-tight">Acceso Comerciantes</h1>
-                <p className="text-xs text-muted-foreground">AdministrÃ¡ tu inventario, ventas y datos de tu local</p>
+                <p className="text-xs text-muted-foreground">Administrá tu inventario, ventas y datos de tu local</p>
               </div>
             </div>
 
@@ -200,7 +200,7 @@ function AuthPage() {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="mt-4 space-y-4">
                   <Field id="login-email" name="email" label="Email" type="email" autoComplete="email" placeholder="comercio@ejemplo.com" />
-                  <Field id="login-password" name="password" label="ContraseÃ±a" type="password" autoComplete="current-password" />
+                  <Field id="login-password" name="password" label="Contraseña" type="password" autoComplete="current-password" />
                   <Button type="submit" className="h-11 w-full" disabled={busy}>
                     <Store className="size-4 mr-1.5" /> Entrar a Administrar mi Tienda
                   </Button>
@@ -209,18 +209,18 @@ function AuthPage() {
                   </div>
                   <div className="pt-2 text-center">
                     <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setMode("forgot")}>
-                      Â¿Olvidaste tu contraseÃ±a?
+                      ¿Olvidaste tu contraseña?
                     </button>
                   </div>
                 </form>
               </TabsContent>
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="mt-4 space-y-3.5">
-                  <Field id="signup-store" name="storeName" label="Nombre de tu Local / Tienda" placeholder="Ej: VerdulerÃ­a Don Pepe, Boutique Central" required />
+                  <Field id="signup-store" name="storeName" label="Nombre de tu Local / Tienda" placeholder="Ej: Verdulería Don Pepe, Boutique Central" required />
                   <Field id="signup-name" name="name" label="Nombre del titular / responsable" placeholder="Tu nombre y apellido" required />
                   <Field id="signup-whatsapp" name="whatsapp" label="WhatsApp del comercio (para recibir pedidos)" placeholder="5491155550101" required />
                   <Field id="signup-email" name="email" label="Email de registro" type="email" autoComplete="email" placeholder="comercio@ejemplo.com" required />
-                  <Field id="signup-password" name="password" label="ContraseÃ±a (mÃ­nimo 6 caracteres)" type="password" autoComplete="new-password" required />
+                  <Field id="signup-password" name="password" label="Contraseña (mínimo 6 caracteres)" type="password" autoComplete="new-password" required />
                   <Button type="submit" variant="cta" className="h-11 w-full mt-2" disabled={busy}>
                     <UserCheck className="size-4 mr-1.5" /> Crear Cuenta y Empezar a Administrar
                   </Button>

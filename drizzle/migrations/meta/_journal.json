@@ -43,6 +43,13 @@
       "when": 1794753896566,
       "tag": "0005_admin_role_management",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794845126185,
+      "tag": "0006_listing_second_photo",
+      "breakpoints": true
     }
   ]
 }

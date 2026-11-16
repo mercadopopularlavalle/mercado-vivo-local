@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowLeft, CalendarDays, ImageOff, MapPin, MessageCircle, ShieldCheck, UserRound } from "lucide-react";
@@ -56,21 +57,7 @@ function ListingPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:gap-10">
-        <div className="overflow-hidden rounded-3xl border bg-muted">
-          {listing.imageUrl ? (
-            <img
-              src={listing.imageUrl}
-              alt={listing.title}
-              width={944}
-              height={720}
-              className="aspect-[4/3] size-full object-cover"
-            />
-          ) : (
-            <div className="grid aspect-[4/3] place-items-center text-muted-foreground">
-              <ImageOff className="size-10" />
-            </div>
-          )}
-        </div>
+        <PhotoGallery urls={listing.imageUrls ?? (listing.imageUrl ? [listing.imageUrl] : [])} title={listing.title} />
 
         <aside className="flex flex-col gap-5">
           <div className="rounded-3xl border bg-card p-6 shadow-sm">
@@ -143,6 +130,42 @@ function ListingPage() {
           {cleanDescription || "El vendedor no agregó una descripción."}
         </p>
       </section>
+    </div>
+  );
+}
+
+function PhotoGallery({ urls, title }: { urls: string[]; title: string }) {
+  const [active, setActive] = useState(0);
+  const current = urls[Math.min(active, urls.length - 1)];
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-hidden rounded-3xl border bg-muted">
+        {current ? (
+          <img src={current} alt={title} width={944} height={720} className="aspect-[4/3] size-full object-cover" />
+        ) : (
+          <div className="grid aspect-[4/3] place-items-center text-muted-foreground">
+            <ImageOff className="size-10" />
+          </div>
+        )}
+      </div>
+      {urls.length > 1 && (
+        <div className="flex gap-3">
+          {urls.map((url, i) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`Ver foto ${i + 1}`}
+              aria-pressed={i === active}
+              className={`size-20 overflow-hidden rounded-2xl border-2 bg-muted transition-colors sm:size-24 ${
+                i === active ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
+              }`}
+            >
+              <img src={url} alt={`${title} — foto ${i + 1}`} loading="lazy" className="size-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

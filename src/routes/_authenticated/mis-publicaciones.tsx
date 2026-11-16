@@ -4,10 +4,10 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import {
   AlertCircle,
   Building2,
+  Camera,
   Check,
   Eye,
   ImageOff,
-  ImagePlus,
   Loader2,
   Lock,
   MapPin,
@@ -66,7 +66,15 @@ import { ActiveSubscriptionBadge, InactiveStoreBanner } from "@/components/Subsc
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, CATEGORY_SLUGS, categoryLabel } from "@/lib/categories";
 import { formatPrice, isValidWhatsapp, normalizeWhatsapp } from "@/lib/format";
-import { isStoragePath, LISTING_BUCKET } from "@/lib/listing-images";
+import { LISTING_BUCKET } from "@/lib/listing-images";
+import { ImageOptimizeError, optimizeImage, extensionFor } from "@/lib/image-optimize";
+import {
+  removeStoredPhotos,
+  slotsFromListing,
+  uploadListingPhotos,
+  type PhotoSlot,
+} from "@/lib/listing-photos";
+import { ListingPhotosPicker } from "@/components/ListingPhotosPicker";
 import {
   appSettingsQuery,
   myListingsQuery,
@@ -87,10 +95,10 @@ export const Route = createFileRoute("/_authenticated/mis-publicaciones")({
     ]),
   head: () => ({
     meta: [
-      { title: "Administrar mi Tienda â€” Mercado Popular" },
-      { name: "description", content: "AdministrÃ¡ los datos de tu comercio y el inventario de productos en Mercado Popular." },
-      { property: "og:title", content: "Administrar mi Tienda â€” Mercado Popular" },
-      { property: "og:description", content: "AdministrÃ¡ los datos de tu local e inventario de productos." },
+      { title: "Administrar mi Tienda — Mercado Popular" },
+      { name: "description", content: "Administrá los datos de tu comercio y el inventario de productos en Mercado Popular." },
+      { property: "og:title", content: "Administrar mi Tienda — Mercado Popular" },
+      { property: "og:description", content: "Administrá los datos de tu local e inventario de productos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -133,7 +141,7 @@ function ManageStorePage() {
               )}
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Panel de AdministraciÃ³n de tu Comercio Â· {listings.length} {listings.length === 1 ? "artÃ­culo" : "artÃ­culos"} en catálogo
+              Panel de Administración de tu Comercio · {listings.length} {listings.length === 1 ? "artículo" : "artículos"} en catálogo
             </p>
           </div>
         </div>
@@ -327,9 +335,9 @@ function InventoryTab({
         {listings.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
             <Package className="size-12 text-muted-foreground/60" />
-            <h3 className="mt-4 text-lg font-bold">Tu inventario estÃ¡ vacÃ­o</h3>
+            <h3 className="mt-4 text-lg font-bold">Tu inventario está vacío</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              ComenzÃ¡ agregando los productos de tu comercio para que los vecinos los encuentren.
+              Comenzá agregando los productos de tu comercio para que los vecinos los encuentren.
             </p>
             <Button
               onClick={() => setOpenAddModal(true)}
@@ -345,11 +353,11 @@ function InventoryTab({
               <TableRow>
                 <TableHead className="w-16">Foto</TableHead>
                 <TableHead>Producto</TableHead>
-                <TableHead className="w-32">CategorÃ­a</TableHead>
+                <TableHead className="w-32">Categoría</TableHead>
                 <TableHead className="w-36">Precio (ARS)</TableHead>
                 <TableHead className="w-32">Stock</TableHead>
                 <TableHead className="w-28 text-center">Estado</TableHead>
-                <TableHead className="w-32 text-right">Acciones</TableHead>
+                <TableHead className="w-40 text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -435,7 +443,7 @@ function InventoryTab({
                     {/* Estado: Si stock === 0 => AGOTADO */}
                     <TableCell className="text-center">
                       {isOutOfStock ? (
-                        <Badge variant="offer" className="bg-[#F97316] text-white">
+                        <Badge variant="offer">
                           Agotado
                         </Badge>
                       ) : isPaused ? (
@@ -468,7 +476,8 @@ function InventoryTab({
                             <Eye className="size-4" />
                           </Link>
                         </Button>
-                        <DeleteListingDialog listingId={item.id} title={item.title} imagePath={item.imagePath} userId={userId} />
+                        <EditPhotosDialog listing={item} userId={userId} disabled={!storeActive} />
+                        <DeleteListingDialog listingId={item.id} title={item.title} imagePaths={item.imagePaths} userId={userId} />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -507,20 +516,9 @@ function AddProductModal({
 }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
+  const [optimizing, setOptimizing] = useState(false);
   const [category, setCategory] = useState<string>("hogar");
-
-  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error("El archivo debe ser una imagen");
-      return;
-    }
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-  }
 
   async function handleAddProduct(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -535,21 +533,13 @@ function AddProductModal({
       return;
     }
     if (isNaN(price) || price < 0) {
-      toast.error("IngresÃ¡ un precio vÃ¡lido");
+      toast.error("Ingresá un precio válido");
       return;
     }
 
     setBusy(true);
     try {
-      let imagePath: string | null = null;
-      if (file) {
-        const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-        imagePath = `${userId}/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from(LISTING_BUCKET)
-          .upload(imagePath, file);
-        if (uploadErr) throw uploadErr;
-      }
+      const { image_url, image_url_2, uploaded } = await uploadListingPhotos(userId, photos);
 
       // Preparar la descripción inyectando el tag de stock
       const finalDesc = updateDescriptionWithStock(description, stock);
@@ -562,18 +552,21 @@ function AddProductModal({
         category: category as any,
         location: defaultLocation || "Local",
         description: finalDesc,
-        image_url: imagePath,
+        image_url,
+        image_url_2,
         status,
       });
 
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        await removeStoredPhotos(uploaded);
+        throw insertErr;
+      }
 
       toast.success("Producto agregado al inventario");
       await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
       await queryClient.invalidateQueries({ queryKey: ["listings"] });
       onOpenChange(false);
-      setFile(null);
-      setPreview(null);
+      setPhotos([]);
     } catch {
       toast.error("No se pudo agregar el producto");
     } finally {
@@ -587,26 +580,16 @@ function AddProductModal({
         <DialogHeader>
           <DialogTitle>Agregar producto al Inventario</DialogTitle>
           <DialogDescription>
-            CompletÃ¡ los datos para publicarlo en la tienda de tu comercio.
+            Completá los datos para publicarlo en la tienda de tu comercio.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleAddProduct} className="space-y-4">
-          {/* Subir Foto */}
+          {/* Fotos (hasta 2) */}
           <div>
-            <Label className="text-xs font-semibold">Foto del producto</Label>
-            <div className="mt-1.5 flex items-center gap-4">
-              <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed bg-muted text-muted-foreground">
-                {preview ? (
-                  <img src={preview} alt="Vista previa" className="size-full object-cover" />
-                ) : (
-                  <ImagePlus className="size-8 opacity-60" />
-                )}
-              </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-accent">
-                <Upload className="size-4" /> Seleccionar imagen
-                <input type="file" accept="image/*" className="sr-only" onChange={onFileChange} />
-              </label>
+            <Label className="text-xs font-semibold">Fotos del producto</Label>
+            <div className="mt-1.5">
+              <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
             </div>
           </div>
 
@@ -621,7 +604,7 @@ function AddProductModal({
           <div className="grid grid-cols-2 gap-3">
             {/* Categoría */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">CategorÃ­a *</Label>
+              <Label className="text-xs font-semibold">Categoría *</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-10">
                   <SelectValue />
@@ -652,24 +635,25 @@ function AddProductModal({
             </Label>
             <Input id="prod-stock" name="stock" type="number" min={0} defaultValue={1} required className="h-10" />
             <p className="text-[11px] text-muted-foreground">
-              Si colocÃ¡s 0, el producto figurarÃ¡ de inmediato como <strong>Agotado</strong>.
+              Si colocás 0, el producto figurará de inmediato como <strong>Agotado</strong>.
             </p>
           </div>
 
           {/* Descripción opcional */}
           <div className="space-y-1.5">
             <Label htmlFor="prod-desc" className="text-xs font-semibold">
-              DescripciÃ³n breve
+              Descripción breve
             </Label>
-            <Input id="prod-desc" name="description" placeholder="Detalles, talle, caracterÃ­sticas..." className="h-10" />
+            <Input id="prod-desc" name="description" placeholder="Detalles, talle, características..." className="h-10" />
           </div>
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="cta" disabled={busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : "Publicar e ingresar"}
+            <Button type="submit" variant="cta" disabled={busy || optimizing}>
+              {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
+              {optimizing ? "Optimizando imagen..." : busy ? "Subiendo..." : "Publicar e ingresar"}
             </Button>
           </DialogFooter>
         </form>
@@ -694,15 +678,22 @@ function StoreProfileTab({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(profile?.logo_url || null);
 
-  function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
+  const [logoOptimizing, setLogoOptimizing] = useState(false);
+
+  async function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
+    e.target.value = "";
     if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error("El archivo debe ser una imagen");
-      return;
+    setLogoOptimizing(true);
+    try {
+      const optimized = await optimizeImage(f);
+      setLogoFile(optimized);
+      setLogoPreview(URL.createObjectURL(optimized));
+    } catch (err) {
+      toast.error(err instanceof ImageOptimizeError ? err.message : "No pudimos optimizar la imagen");
+    } finally {
+      setLogoOptimizing(false);
     }
-    setLogoFile(f);
-    setLogoPreview(URL.createObjectURL(f));
   }
 
   async function handleSaveStoreData(e: FormEvent<HTMLFormElement>) {
@@ -714,11 +705,11 @@ function StoreProfileTab({
     const city = String(form.get("city") ?? "").trim();
 
     if (!name) {
-      toast.error("IngresÃ¡ el nombre del titular o responsable");
+      toast.error("Ingresá el nombre del titular o responsable");
       return;
     }
     if (whatsapp && !isValidWhatsapp(whatsapp)) {
-      toast.error("WhatsApp invÃ¡lido: usÃ¡ cÃ³digo de paÃ­s, ej. 5491155550101");
+      toast.error("WhatsApp inválido: usá código de país, ej. 5491155550101");
       return;
     }
 
@@ -728,11 +719,10 @@ function StoreProfileTab({
 
       // Si subió un nuevo archivo de logo
       if (logoFile) {
-        const ext = logoFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
-        const path = `${userId}/logo_${Date.now()}.${ext}`;
+        const path = `${userId}/logo_${Date.now()}.${extensionFor(logoFile)}`;
         const { error: uploadErr } = await supabase.storage
           .from(LISTING_BUCKET)
-          .upload(path, logoFile, { upsert: true });
+          .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
         if (!uploadErr) {
           const { data: urlData } = supabase.storage.from(LISTING_BUCKET).getPublicUrl(path);
           logoUrl = urlData.publicUrl;
@@ -748,7 +738,7 @@ function StoreProfileTab({
       });
 
       await queryClient.invalidateQueries({ queryKey: ["my-profile", userId] });
-      toast.success("Â¡Datos del local guardados con Ã©xito!");
+      toast.success("¡Datos del local guardados con éxito!");
     } catch {
       toast.error("No pudimos guardar los datos del local");
     } finally {
@@ -763,9 +753,9 @@ function StoreProfileTab({
           <Store className="size-6" />
         </span>
         <div>
-          <h2 className="text-xl font-bold">ConfiguraciÃ³n de tu Comercio</h2>
+          <h2 className="text-xl font-bold">Configuración de tu Comercio</h2>
           <p className="text-xs text-muted-foreground">
-            Estos datos serÃ¡n visibles para los compradores en cada producto de tu tienda.
+            Estos datos serán visibles para los compradores en cada producto de tu tienda.
           </p>
         </div>
       </div>
@@ -776,7 +766,9 @@ function StoreProfileTab({
           <Label className="text-xs font-semibold">Logo del Comercio</Label>
           <div className="mt-2 flex items-center gap-4">
             <div className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-dashed bg-muted">
-              {logoPreview ? (
+              {logoOptimizing ? (
+                <Loader2 className="size-6 animate-spin text-primary" />
+              ) : logoPreview ? (
                 <img src={logoPreview} alt="Logo" className="size-full object-cover" />
               ) : (
                 <Store className="size-8 text-muted-foreground opacity-60" />
@@ -784,8 +776,8 @@ function StoreProfileTab({
             </div>
             <div>
               <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-accent">
-                <Upload className="size-4" /> Subir logo o foto del local
-                <input type="file" accept="image/*" className="sr-only" onChange={onLogoChange} />
+                <Upload className="size-4" /> {logoOptimizing ? "Optimizando imagen..." : "Subir logo o foto del local"}
+                <input type="file" accept="image/*" className="sr-only" onChange={onLogoChange} disabled={logoOptimizing} />
               </label>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Recomendado: imagen cuadrada (PNG o JPG) de al menos 400x400 px.
@@ -803,7 +795,7 @@ function StoreProfileTab({
             id="store-name"
             name="store"
             defaultValue={profile?.store_name ?? ""}
-            placeholder="Ej: PanaderÃ­a La UniÃ³n, FerreterÃ­a El Puente"
+            placeholder="Ej: Panadería La Unión, Ferretería El Puente"
             required
             className="h-11"
           />
@@ -818,12 +810,12 @@ function StoreProfileTab({
             id="store-whatsapp"
             name="whatsapp"
             defaultValue={profile?.whatsapp ?? ""}
-            placeholder="5491155550101 (con cÃ³digo de paÃ­s)"
+            placeholder="5491155550101 (con código de país)"
             required
             className="h-11"
           />
           <p className="text-[11px] text-muted-foreground">
-            Los clientes harÃ¡n click en "Contactar por WhatsApp" y enviarÃ¡n el pedido directo a este nÃºmero.
+            Los clientes harán click en "Contactar por WhatsApp" y enviarán el pedido directo a este número.
           </p>
         </div>
 
@@ -845,7 +837,7 @@ function StoreProfileTab({
         {/* Ubicación / Ciudad */}
         <div className="space-y-1.5">
           <Label htmlFor="store-city" className="text-xs font-semibold">
-            Ciudad / UbicaciÃ³n del local
+            Ciudad / Ubicación del local
           </Label>
           <Input
             id="store-city"
@@ -857,7 +849,7 @@ function StoreProfileTab({
         </div>
 
         <div className="pt-2">
-          <Button type="submit" variant="cta" size="lg" className="h-11 w-full sm:w-auto" disabled={busy}>
+          <Button type="submit" variant="cta" size="lg" className="h-11 w-full sm:w-auto" disabled={busy || logoOptimizing}>
             {busy ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
             Guardar datos del local
           </Button>
@@ -868,18 +860,98 @@ function StoreProfileTab({
 }
 
 /* =========================================================================
+   DIÁLOGO PARA CAMBIAR FOTOS (HASTA 2, OPTIMIZADAS)
+   ========================================================================= */
+
+function EditPhotosDialog({
+  listing,
+  userId,
+  disabled,
+}: {
+  listing: MyListing;
+  userId: string;
+  disabled: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
+  const [optimizing, setOptimizing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  function onOpenChange(next: boolean) {
+    if (busy || optimizing) return;
+    if (next) setPhotos(slotsFromListing(listing.imagePaths, listing.imageUrls));
+    setOpen(next);
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      const { image_url, image_url_2, uploaded } = await uploadListingPhotos(userId, photos);
+      const { error } = await supabase
+        .from("listings")
+        .update({ image_url, image_url_2 })
+        .eq("id", listing.id);
+      if (error) {
+        await removeStoredPhotos(uploaded);
+        throw error;
+      }
+      const stillUsed = new Set([image_url, image_url_2]);
+      await removeStoredPhotos(listing.imagePaths.filter((p) => !stillUsed.has(p)));
+      await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["listings"] });
+      await queryClient.invalidateQueries({ queryKey: ["listing", listing.id] });
+      toast.success("Fotos actualizadas");
+      setOpen(false);
+    } catch {
+      toast.error("No pudimos guardar las fotos. Probá de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="h-8 gap-1 px-2 text-xs" disabled={disabled} title="Cambiar foto">
+          <Camera className="size-4" />
+          <span className="hidden xl:inline">Cambiar foto</span>
+          <span className="sr-only xl:hidden">Cambiar foto</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Cambiar foto</DialogTitle>
+          <DialogDescription>“{listing.title}” · hasta 2 fotos. La primera es la portada.</DialogDescription>
+        </DialogHeader>
+        <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy || optimizing}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="cta" onClick={save} disabled={busy || optimizing}>
+            {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
+            {optimizing ? "Optimizando imagen..." : busy ? "Subiendo..." : "Guardar fotos"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* =========================================================================
    DIÁLOGO DE ELIMINACIÓN
    ========================================================================= */
 
 function DeleteListingDialog({
   listingId,
   title,
-  imagePath,
+  imagePaths,
   userId,
 }: {
   listingId: string;
   title: string;
-  imagePath: string | null;
+  imagePaths: Array<string | null>;
   userId: string;
 }) {
   const queryClient = useQueryClient();
@@ -888,9 +960,7 @@ function DeleteListingDialog({
     mutationFn: async () => {
       const { error } = await supabase.from("listings").delete().eq("id", listingId);
       if (error) throw error;
-      if (isStoragePath(imagePath)) {
-        await supabase.storage.from(LISTING_BUCKET).remove([imagePath]);
-      }
+      await removeStoredPhotos(imagePaths);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
@@ -909,9 +979,9 @@ function DeleteListingDialog({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Â¿Eliminar este producto?</AlertDialogTitle>
+          <AlertDialogTitle>¿Eliminar este producto?</AlertDialogTitle>
           <AlertDialogDescription>
-            â€œ{title}â€  se borrarÃ¡ permanentemente del inventario y del catÃ¡logo.
+            “{title}” se borrará permanentemente del inventario y del catálogo.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

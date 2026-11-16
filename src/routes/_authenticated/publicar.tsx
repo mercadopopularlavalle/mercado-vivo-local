@@ -1,7 +1,7 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, CATEGORY_SLUGS } from "@/lib/categories";
 import { isValidWhatsapp, normalizeWhatsapp } from "@/lib/format";
-import { LISTING_BUCKET } from "@/lib/listing-images";
+import { removeStoredPhotos, uploadListingPhotos, type PhotoSlot } from "@/lib/listing-photos";
+import { ListingPhotosPicker } from "@/components/ListingPhotosPicker";
 import { appSettingsQuery, myProfileQuery, saveMyProfile } from "@/lib/my-data";
 import { InactiveStoreBanner } from "@/components/SubscriptionStatus";
 
@@ -43,8 +44,6 @@ const listingSchema = z.object({
   description: z.string().trim().max(5000, "Máximo 5000 caracteres"),
 });
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
 function PublishPage() {
   const { user } = Route.useRouteContext();
   const { data: profile } = useSuspenseQuery(myProfileQuery(user.id));
@@ -68,34 +67,9 @@ function PublishForm() {
   const [category, setCategory] = useState<string>("");
   const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? "");
   const [location, setLocation] = useState(profile?.city ?? "");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
+  const [optimizing, setOptimizing] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return undefined;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
-  function onFile(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error("El archivo debe ser una imagen");
-      return;
-    }
-    if (f.size > MAX_IMAGE_BYTES) {
-      toast.error("La foto no puede superar los 5 MB");
-      return;
-    }
-    setFile(f);
-  }
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -123,22 +97,17 @@ function PublishForm() {
         await saveMyProfile(user.id, { whatsapp: phone, city: profile?.city || location });
       }
 
-      let imagePath: string | null = null;
-      if (file) {
-        const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-        imagePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from(LISTING_BUCKET)
-          .upload(imagePath, file, { contentType: file.type, upsert: false });
-        if (upErr) throw upErr;
-      }
+      const { image_url, image_url_2, uploaded } = await uploadListingPhotos(user.id, photos);
 
       const { data: created, error } = await supabase
         .from("listings")
-        .insert({ ...parsed.data, user_id: user.id, image_url: imagePath })
+        .insert({ ...parsed.data, user_id: user.id, image_url, image_url_2 })
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) {
+        await removeStoredPhotos(uploaded);
+        throw error;
+      }
 
       await queryClient.invalidateQueries();
       toast.success("¡Tu aviso ya está publicado!");
@@ -158,28 +127,10 @@ function PublishForm() {
 
       <form onSubmit={submit} className="mt-8 space-y-6">
         <div className="rounded-3xl border bg-card p-6 sm:p-8">
-          <Label className="text-base font-semibold">Foto</Label>
-          {preview ? (
-            <div className="relative mt-3 overflow-hidden rounded-2xl border">
-              <img src={preview} alt="Vista previa" className="aspect-[4/3] w-full object-cover" />
-              <Button
-                type="button"
-                size="icon"
-                variant="secondary"
-                className="absolute right-3 top-3 rounded-full"
-                onClick={() => setFile(null)}
-                aria-label="Quitar foto"
-              >
-                <X />
-              </Button>
-            </div>
-          ) : (
-            <label className="mt-3 flex aspect-[16/7] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-muted/50 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary-soft">
-              <ImagePlus className="size-8" />
-              <span className="text-sm font-medium">Subí una foto (hasta 5 MB)</span>
-              <input type="file" accept="image/*" className="sr-only" onChange={onFile} />
-            </label>
-          )}
+          <Label className="text-base font-semibold">Fotos</Label>
+          <div className="mt-3">
+            <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
+          </div>
         </div>
 
         <div className="space-y-5 rounded-3xl border bg-card p-6 sm:p-8">
@@ -242,9 +193,15 @@ function PublishForm() {
           />
         </div>
 
-        <Button type="submit" variant="cta" size="xl" className="w-full" disabled={busy}>
-          {busy && <Loader2 className="animate-spin" />}
-          Publicar venta
+        <Button type="submit" variant="cta" size="xl" className="w-full" disabled={busy || optimizing}>
+          {(busy || optimizing) && <Loader2 className="animate-spin" />}
+          {optimizing
+            ? "Optimizando imagen..."
+            : busy
+              ? photos.some((p) => p.file)
+                ? "Subiendo fotos..."
+                : "Publicando..."
+              : "Publicar venta"}
         </Button>
       </form>
     </div>

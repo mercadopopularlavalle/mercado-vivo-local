@@ -32,7 +32,7 @@ use the editor.
 ## Project rules
 
 - Public listing reads go through server functions in `src/lib/listings.functions.ts` using a publishable server client; owner writes use the browser client under RLS — keeps SSR-friendly public pages and per-user permissions in the database.
-- Listing photos live in a private storage bucket and are shown via signed URLs; `image_url` holds either a bucket path or a `/images/seed/...` public path — the workspace blocks public buckets.
+- Listing photos live in a private storage bucket and are shown via signed URLs; `image_url` (cover) and `image_url_2` hold either a bucket path or a `/images/seed/...` public path, and every upload goes through `src/lib/image-optimize.ts` + `ListingPhotosPicker` first — the workspace blocks public buckets and two fixed columns cap photos per listing in the schema.
 - Seller profiles use plain UUID ids (no FK to auth users) so demo sellers can exist; a signup trigger creates the profile for real users.
 - Protected pages live under `src/routes/_authenticated/` (client-only gate redirecting to `/auth`).
 - Roles live in `user_roles` checked via `has_role()` and are granted/revoked only through admin-checked security-definer RPCs (no self-revoke, never zero admins); seller `is_active` on profiles is changeable only by admins (DB trigger) and gates public listing visibility and listing inserts in RLS — enforcement stays in the database, not the UI.

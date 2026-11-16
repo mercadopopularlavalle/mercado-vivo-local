@@ -72,6 +72,9 @@ export type MyListing = {
   status: "active" | "paused";
   imagePath: string | null;
   imageUrl: string | null;
+  /** Both photo slots (cover first); entries may be null. */
+  imagePaths: Array<string | null>;
+  imageUrls: Array<string | null>;
   createdAt: string;
 };
 
@@ -81,11 +84,14 @@ export const myListingsQuery = (userId: string) =>
     queryFn: async (): Promise<MyListing[]> => {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, title, description, price, category, location, status, image_url, created_at")
+        .select("id, title, description, price, category, location, status, image_url, image_url_2, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      const urls = await resolveImageUrls(supabase, data.map((r) => r.image_url));
+      const urls = await resolveImageUrls(
+        supabase,
+        data.flatMap((r) => [r.image_url, r.image_url_2]),
+      );
       return data.map((r, i) => {
         const stock = parseStockFromDescription(r.description);
         return {
@@ -98,7 +104,9 @@ export const myListingsQuery = (userId: string) =>
           location: r.location,
           status: r.status === "paused" ? "paused" : "active",
           imagePath: r.image_url,
-          imageUrl: urls[i] ?? null,
+          imageUrl: urls[i * 2] ?? null,
+          imagePaths: [r.image_url, r.image_url_2],
+          imageUrls: [urls[i * 2] ?? null, urls[i * 2 + 1] ?? null],
           createdAt: r.created_at,
         };
       });

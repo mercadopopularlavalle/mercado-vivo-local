@@ -17,6 +17,8 @@ export type ListingSummary = {
 
 export type ListingDetail = ListingSummary & {
   description: string;
+  /** Up to two photos; the first one is the cover. */
+  imageUrls: string[];
   seller: { name: string; store: string | null; whatsapp: string | null; city: string | null };
 };
 
@@ -72,7 +74,7 @@ export const getListing = createServerFn({ method: "GET" })
     const { data: row, error } = await supabase
       .from("listings")
       .select(
-        "id, title, description, price, category, location, image_url, created_at, profiles(display_name, store_name, whatsapp, city)",
+        "id, title, description, price, category, location, image_url, image_url_2, created_at, profiles(display_name, store_name, whatsapp, city)",
       )
       .eq("id", data.id)
       .eq("status", "active")
@@ -80,7 +82,8 @@ export const getListing = createServerFn({ method: "GET" })
     if (error) throw new Error("No pudimos cargar el aviso");
     if (!row) return null;
 
-    const [imageUrl] = await resolveImageUrls(supabase, [row.image_url], storageRewrite());
+    const resolved = await resolveImageUrls(supabase, [row.image_url, row.image_url_2], storageRewrite());
+    const imageUrls = resolved.filter((u): u is string => !!u);
     const profile = row.profiles as {
       display_name: string;
       store_name: string | null;
@@ -94,7 +97,8 @@ export const getListing = createServerFn({ method: "GET" })
       price: Number(row.price),
       category: row.category,
       location: row.location,
-      imageUrl: imageUrl ?? null,
+      imageUrl: imageUrls[0] ?? null,
+      imageUrls,
       createdAt: row.created_at,
       seller: {
         name: profile?.display_name ?? "Vendedor",
