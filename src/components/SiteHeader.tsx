@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutList, LogOut, Plus, ShieldCheck, UserRound } from "lucide-react";
+import { LayoutList, LogOut, Plus, ShieldCheck, Store, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,10 +38,11 @@ export function SiteHeader() {
         <nav className="ml-auto flex items-center gap-2">
           <Link
             to="/mis-publicaciones"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground sm:inline-flex"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground sm:inline-flex items-center gap-1.5"
             activeProps={{ className: "bg-primary-foreground/10 text-primary-foreground" }}
           >
-            Mis publicaciones
+            <Store className="size-4" />
+            <span>Administrar mi Tienda</span>
           </Link>
           <Button asChild variant="cta">
             <Link to="/publicar">
@@ -75,7 +76,7 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/mis-publicaciones">
-                    <LayoutList className="size-4" /> Mis publicaciones
+                    <Store className="size-4" /> Administrar mi Tienda
                   </Link>
                 </DropdownMenuItem>
                 {isAdmin && (

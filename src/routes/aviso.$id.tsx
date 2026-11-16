@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { categoryLabel, isCategorySlug } from "@/lib/categories";
 import { buildWhatsappLink, formatDate, formatPrice } from "@/lib/format";
 import { listingQuery } from "@/lib/queries";
+import { parseStockFromDescription } from "@/lib/my-data";
 
 export const Route = createFileRoute("/aviso/$id")({
   loader: async ({ context, params }) => {
@@ -38,6 +39,9 @@ function ListingPage() {
   if (!listing) return null;
 
   const cat = isCategorySlug(listing.category) ? listing.category : undefined;
+  const stock = parseStockFromDescription(listing.description);
+  const cleanDescription = (listing.description ?? "").replace(/\[STOCK:\d+\]/gi, "").trim();
+  const isOutOfStock = stock === 0;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
@@ -70,9 +74,20 @@ function ListingPage() {
 
         <aside className="flex flex-col gap-5">
           <div className="rounded-3xl border bg-card p-6 shadow-sm">
-            <span className="inline-flex rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
-              {categoryLabel(listing.category)}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
+                {categoryLabel(listing.category)}
+              </span>
+              {isOutOfStock ? (
+                <span className="inline-flex rounded-full bg-[#F97316] px-3 py-1 text-xs font-bold text-white shadow-sm">
+                  Agotado
+                </span>
+              ) : (
+                <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                  En stock ({stock} u.)
+                </span>
+              )}
+            </div>
             <h1 className="mt-3 text-2xl font-bold leading-tight sm:text-3xl">{listing.title}</h1>
             <p className="mt-3 font-display text-4xl font-extrabold tracking-tight">
               {formatPrice(listing.price)}
@@ -125,7 +140,7 @@ function ListingPage() {
       <section className="mt-8 rounded-3xl border bg-card p-6 sm:p-8 lg:max-w-[calc(58%)]">
         <h2 className="text-xl font-bold">Descripción</h2>
         <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground/85">
-          {listing.description || "El vendedor no agregó una descripción."}
+          {cleanDescription || "El vendedor no agregó una descripción."}
         </p>
       </section>
     </div>
