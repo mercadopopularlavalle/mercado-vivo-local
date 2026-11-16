@@ -7,16 +7,13 @@ import {
   Camera,
   Check,
   Eye,
+  Flame,
   ImageOff,
   Loader2,
-  Lock,
-  MapPin,
   Package,
   PackagePlus,
-  Pause,
-  Pencil,
-  Play,
   Save,
+  Sparkles,
   Store,
   Trash2,
   Upload,
@@ -64,8 +61,8 @@ import {
 } from "@/components/ui/select";
 import { ActiveSubscriptionBadge, InactiveStoreBanner } from "@/components/SubscriptionStatus";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIES, CATEGORY_SLUGS, categoryLabel } from "@/lib/categories";
-import { formatPrice, isValidWhatsapp, normalizeWhatsapp } from "@/lib/format";
+import { CATEGORIES, categoryLabel } from "@/lib/categories";
+import { isValidWhatsapp, normalizeWhatsapp } from "@/lib/format";
 import { LISTING_BUCKET } from "@/lib/listing-images";
 import { ImageOptimizeError, optimizeImage, extensionFor } from "@/lib/image-optimize";
 import {
@@ -86,6 +83,12 @@ import {
 } from "@/lib/my-data";
 import { cn } from "@/lib/utils";
 
+// Promoción lanzamiento: uso gratuito para nuevos vendedores hasta el 15 de diciembre
+export function isFreePromoActive(): boolean {
+  const deadline = new Date("2026-12-15T23:59:59-03:00");
+  return new Date() <= deadline;
+}
+
 export const Route = createFileRoute("/_authenticated/mis-publicaciones")({
   loader: ({ context }) =>
     Promise.all([
@@ -95,10 +98,10 @@ export const Route = createFileRoute("/_authenticated/mis-publicaciones")({
     ]),
   head: () => ({
     meta: [
-      { title: "Administrar mi Tienda — Mercado Popular" },
-      { name: "description", content: "Administrá los datos de tu comercio y el inventario de productos en Mercado Popular." },
-      { property: "og:title", content: "Administrar mi Tienda — Mercado Popular" },
-      { property: "og:description", content: "Administrá los datos de tu local e inventario de productos." },
+      { title: "Publicaciones de Vendedores y Mi Tienda — Mercado Popular" },
+      { name: "description", content: "Administrá tus publicaciones de vendedor y los datos de Mi Tienda en Mercado Popular." },
+      { property: "og:title", content: "Publicaciones de Vendedores — Mercado Popular" },
+      { property: "og:description", content: "Administrá tus publicaciones y los datos de Mi Tienda." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -110,8 +113,11 @@ function ManageStorePage() {
   const { user } = Route.useRouteContext();
   const { data: listings } = useSuspenseQuery(myListingsQuery(user.id));
   const { data: profile } = useSuspenseQuery(myProfileQuery(user.id));
-  const storeActive = profile?.is_active ?? false;
+  const promoActive = isFreePromoActive();
+  const hasSubscription = profile?.is_active ?? false;
+  const storeActive = hasSubscription || promoActive;
   const storeName = profile?.store_name || "Mi Tienda";
+  const [activeTab, setActiveTab] = useState("inventario");
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
@@ -121,7 +127,19 @@ function ManageStorePage() {
         </div>
       )}
 
-      {/* Cabecera del Panel */}
+      {!hasSubscription && promoActive && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-50/90 p-4 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+          <Sparkles className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+          <div className="text-sm">
+            <p className="font-bold">¡Beneficio Lanzamiento en Lavalle!</p>
+            <p className="mt-0.5 text-emerald-900/90 dark:text-emerald-200">
+              Tenés uso <strong>100% gratuito</strong> para publicar tus ventas hasta el <strong>15 de diciembre</strong>. Luego de esa fecha podrás activar tu suscripción para continuar.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Cabecera de Publicaciones de Vendedores con acceso directo a Mi Tienda */}
       <div className="mb-8 flex flex-col gap-4 rounded-3xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-primary/10 text-primary">
@@ -132,21 +150,36 @@ function ManageStorePage() {
             )}
           </div>
           <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">
+              Publicaciones de Vendedores
+            </p>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-extrabold sm:text-3xl">{storeName}</h1>
-              {storeActive ? (
+              {hasSubscription ? (
                 <ActiveSubscriptionBadge />
+              ) : promoActive ? (
+                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Gratis hasta 15/12</Badge>
               ) : (
-                <Badge variant="destructive">Tienda Pausada</Badge>
+                <Badge variant="destructive">Suscripción vencida</Badge>
               )}
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Panel de Administración de tu Comercio · {listings.length} {listings.length === 1 ? "artículo" : "artículos"} en catálogo
+              {listings.length} {listings.length === 1 ? "publicación activa" : "publicaciones activas"}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant={activeTab === "local" ? "default" : "outline"}
+            size="sm"
+            className="rounded-xl gap-1.5"
+            onClick={() => setActiveTab("local")}
+          >
+            <Store className="size-4" />
+            Mi Tienda
+          </Button>
           {profile?.whatsapp && (
             <Button asChild variant="outline" size="sm" className="rounded-xl">
               <a
@@ -154,7 +187,7 @@ function ManageStorePage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Probar WhatsApp de la tienda
+                Probar WhatsApp
               </a>
             </Button>
           )}
@@ -166,23 +199,23 @@ function ManageStorePage() {
         </div>
       </div>
 
-      {/* Pestañas Principales: Datos del Local & Inventario */}
-      <Tabs defaultValue="inventario" className="space-y-6">
+      {/* Pestañas dentro de Publicaciones de Vendedores: Mis Publicaciones & Mi Tienda */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="inventario" className="flex items-center gap-2">
-            <Package className="size-4" /> Inventario
+            <Package className="size-4" /> Mis Publicaciones
           </TabsTrigger>
           <TabsTrigger value="local" className="flex items-center gap-2">
-            <Building2 className="size-4" /> Datos de mi Local
+            <Building2 className="size-4" /> Mi Tienda
           </TabsTrigger>
         </TabsList>
 
-        {/* PESTAÑA 1: INVENTARIO */}
+        {/* PESTAÑA 1: PUBLICACIONES / INVENTARIO */}
         <TabsContent value="inventario" className="space-y-6">
-          <InventoryTab listings={listings} userId={user.id} storeActive={storeActive} defaultLocation={profile?.city || "Local"} />
+          <InventoryTab listings={listings} userId={user.id} storeActive={storeActive} defaultLocation={profile?.city || "Lavalle"} />
         </TabsContent>
 
-        {/* PESTAÑA 2: DATOS DE MI LOCAL */}
+        {/* PESTAÑA 2: MI TIENDA (DATOS DEL LOCAL) */}
         <TabsContent value="local">
           <StoreProfileTab profile={profile} userId={user.id} />
         </TabsContent>
@@ -216,7 +249,6 @@ function InventoryTab({
   const [isSaving, setIsSaving] = useState(false);
   const [openAddModal, setOpenAddModal] = useState(false);
 
-  // Inicializar o sincronizar el estado editado
   const getItemPrice = (id: string, orig: number) =>
     editedItems[id]?.price !== undefined ? editedItems[id].price : orig;
   const getItemStock = (id: string, orig: number) =>
@@ -246,7 +278,6 @@ function InventoryTab({
     }));
   }
 
-  // Guardar cambios masivos en precio o stock
   async function handleSaveAllChanges() {
     if (!hasUnsavedChanges) return;
     setIsSaving(true);
@@ -268,7 +299,6 @@ function InventoryTab({
     }
   }
 
-  // Guardar una fila individual
   async function handleSaveSingleRow(id: string) {
     const changes = editedItems[id];
     if (!changes) return;
@@ -294,7 +324,6 @@ function InventoryTab({
 
   return (
     <div className="space-y-4">
-      {/* Barra de acciones de inventario */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-foreground">
@@ -330,14 +359,13 @@ function InventoryTab({
         </div>
       </div>
 
-      {/* Tabla limpia de inventario */}
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
         {listings.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
             <Package className="size-12 text-muted-foreground/60" />
-            <h3 className="mt-4 text-lg font-bold">Tu inventario está vacío</h3>
+            <h3 className="mt-4 text-lg font-bold">Tu lista de publicaciones está vacía</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Comenzá agregando los productos de tu comercio para que los vecinos los encuentren.
+              Comenzá agregando los productos de tu comercio para que los vecinos de Lavalle los encuentren.
             </p>
             <Button
               onClick={() => setOpenAddModal(true)}
@@ -377,7 +405,6 @@ function InventoryTab({
                       isOutOfStock && "bg-destructive/5",
                     )}
                   >
-                    {/* Foto */}
                     <TableCell>
                       <div className="size-12 overflow-hidden rounded-xl bg-muted">
                         {item.imageUrl ? (
@@ -394,20 +421,17 @@ function InventoryTab({
                       </div>
                     </TableCell>
 
-                    {/* Producto */}
                     <TableCell>
                       <div className="font-semibold text-foreground line-clamp-1">{item.title}</div>
                       <div className="text-xs text-muted-foreground">{item.location}</div>
                     </TableCell>
 
-                    {/* Categoría */}
                     <TableCell>
                       <span className="inline-block rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
                         {categoryLabel(item.category)}
                       </span>
                     </TableCell>
 
-                    {/* Precio Editable */}
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-semibold text-muted-foreground">$</span>
@@ -422,7 +446,6 @@ function InventoryTab({
                       </div>
                     </TableCell>
 
-                    {/* Stock Editable */}
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Input
@@ -440,12 +463,9 @@ function InventoryTab({
                       </div>
                     </TableCell>
 
-                    {/* Estado: Si stock === 0 => AGOTADO */}
                     <TableCell className="text-center">
                       {isOutOfStock ? (
-                        <Badge variant="offer">
-                          Agotado
-                        </Badge>
+                        <Badge variant="offer">Agotado</Badge>
                       ) : isPaused ? (
                         <Badge variant="outline" className="text-muted-foreground">
                           Pausado
@@ -457,7 +477,6 @@ function InventoryTab({
                       )}
                     </TableCell>
 
-                    {/* Acciones */}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         {isRowModified && (
@@ -488,7 +507,6 @@ function InventoryTab({
         )}
       </div>
 
-      {/* MODAL PARA AGREGAR NUEVO PRODUCTO AL INVENTARIO */}
       <AddProductModal
         open={openAddModal}
         onOpenChange={setOpenAddModal}
@@ -500,7 +518,7 @@ function InventoryTab({
 }
 
 /* =========================================================================
-   MODAL DE AGREGAR PRODUCTO (FOTO, NOMBRE, CATEGORÍA, PRECIO, STOCK)
+   MODAL DE AGREGAR PRODUCTO (INCLUYE OPCIÓN "SOLO POR HOY")
    ========================================================================= */
 
 function AddProductModal({
@@ -519,6 +537,7 @@ function AddProductModal({
   const [photos, setPhotos] = useState<PhotoSlot[]>([]);
   const [optimizing, setOptimizing] = useState(false);
   const [category, setCategory] = useState<string>("hogar");
+  const [soloPorHoy, setSoloPorHoy] = useState(false);
 
   async function handleAddProduct(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -541,32 +560,46 @@ function AddProductModal({
     try {
       const { image_url, image_url_2, uploaded } = await uploadListingPhotos(userId, photos);
 
-      // Preparar la descripción inyectando el tag de stock
       const finalDesc = updateDescriptionWithStock(description, stock);
       const status = stock === 0 ? "paused" : "active";
 
-      const { error: insertErr } = await supabase.from("listings").insert({
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const payload: Record<string, any> = {
         user_id: userId,
         title,
         price: Math.round(price),
         category: category as any,
-        location: defaultLocation || "Local",
+        location: defaultLocation || "Lavalle",
         description: finalDesc,
         image_url,
         image_url_2,
         status,
-      });
+      };
+
+      if (soloPorHoy) {
+        payload.is_flash_today = true;
+        payload.expires_at = endOfDay.toISOString();
+      }
+
+      const { error: insertErr } = await supabase.from("listings").insert(payload as any);
 
       if (insertErr) {
         await removeStoredPhotos(uploaded);
         throw insertErr;
       }
 
-      toast.success("Producto agregado al inventario");
+      toast.success(
+        soloPorHoy
+          ? "Publicado en Solo por hoy (se borrará al terminar el día)"
+          : "Producto agregado a tus publicaciones",
+      );
       await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
       await queryClient.invalidateQueries({ queryKey: ["listings"] });
       onOpenChange(false);
       setPhotos([]);
+      setSoloPorHoy(false);
     } catch {
       toast.error("No se pudo agregar el producto");
     } finally {
@@ -578,14 +611,13 @@ function AddProductModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Agregar producto al Inventario</DialogTitle>
+          <DialogTitle>Agregar producto</DialogTitle>
           <DialogDescription>
-            Completá los datos para publicarlo en la tienda de tu comercio.
+            Completá los datos para publicarlo en Mercado Popular.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleAddProduct} className="space-y-4">
-          {/* Fotos (hasta 2) */}
           <div>
             <Label className="text-xs font-semibold">Fotos del producto</Label>
             <div className="mt-1.5">
@@ -593,16 +625,14 @@ function AddProductModal({
             </div>
           </div>
 
-          {/* Nombre */}
           <div className="space-y-1.5">
             <Label htmlFor="prod-title" className="text-xs font-semibold">
               Nombre del producto *
             </Label>
-            <Input id="prod-title" name="title" placeholder="Ej: Zapatillas Urbanas, Pan Casero" required className="h-10" />
+            <Input id="prod-title" name="title" placeholder="Ej: Caña de pescar, Pan Casero" required className="h-10" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Categoría */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Categoría *</Label>
               <Select value={category} onValueChange={setCategory}>
@@ -619,7 +649,6 @@ function AddProductModal({
               </Select>
             </div>
 
-            {/* Precio */}
             <div className="space-y-1.5">
               <Label htmlFor="prod-price" className="text-xs font-semibold">
                 Precio (ARS) *
@@ -628,24 +657,36 @@ function AddProductModal({
             </div>
           </div>
 
-          {/* Stock Inicial */}
           <div className="space-y-1.5">
             <Label htmlFor="prod-stock" className="text-xs font-semibold">
               Cantidad en stock *
             </Label>
             <Input id="prod-stock" name="stock" type="number" min={0} defaultValue={1} required className="h-10" />
-            <p className="text-[11px] text-muted-foreground">
-              Si colocás 0, el producto figurará de inmediato como <strong>Agotado</strong>.
-            </p>
           </div>
 
-          {/* Descripción opcional */}
           <div className="space-y-1.5">
             <Label htmlFor="prod-desc" className="text-xs font-semibold">
               Descripción breve
             </Label>
-            <Input id="prod-desc" name="description" placeholder="Detalles, talle, características..." className="h-10" />
+            <Input id="prod-desc" name="description" placeholder="Detalles, estado, talle..." className="h-10" />
           </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-50/70 p-3 text-xs dark:bg-amber-950/30">
+            <input
+              type="checkbox"
+              checked={soloPorHoy}
+              onChange={(e) => setSoloPorHoy(e.target.checked)}
+              className="mt-0.5 size-4 accent-amber-600"
+            />
+            <div>
+              <span className="flex items-center gap-1 font-bold text-amber-900 dark:text-amber-200">
+                <Flame className="size-3.5 text-amber-600" /> Publicar en "Solo por hoy" (usados u ocasionales)
+              </span>
+              <span className="mt-0.5 block text-amber-800/80 dark:text-amber-300/80">
+                No requiere suscripción y se elimina automáticamente al terminar el día (23:59 hs).
+              </span>
+            </div>
+          </label>
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -663,7 +704,7 @@ function AddProductModal({
 }
 
 /* =========================================================================
-   PESTAÑA 2: DATOS DE MI LOCAL (NOMBRE, LOGO, WHATSAPP, UBICACIÓN)
+   PESTAÑA 2: MI TIENDA (NOMBRE, LOGO, WHATSAPP, UBICACIÓN)
    ========================================================================= */
 
 function StoreProfileTab({
@@ -677,7 +718,6 @@ function StoreProfileTab({
   const [busy, setBusy] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(profile?.logo_url || null);
-
   const [logoOptimizing, setLogoOptimizing] = useState(false);
 
   async function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
@@ -709,7 +749,7 @@ function StoreProfileTab({
       return;
     }
     if (whatsapp && !isValidWhatsapp(whatsapp)) {
-      toast.error("WhatsApp inválido: usá código de país, ej. 5491155550101");
+      toast.error("WhatsApp inválido: usá código de país, ej. 5492615550101");
       return;
     }
 
@@ -717,7 +757,6 @@ function StoreProfileTab({
     try {
       let logoUrl = profile?.logo_url || null;
 
-      // Si subió un nuevo archivo de logo
       if (logoFile) {
         const path = `${userId}/logo_${Date.now()}.${extensionFor(logoFile)}`;
         const { error: uploadErr } = await supabase.storage
@@ -738,9 +777,9 @@ function StoreProfileTab({
       });
 
       await queryClient.invalidateQueries({ queryKey: ["my-profile", userId] });
-      toast.success("¡Datos del local guardados con éxito!");
+      toast.success("¡Datos de Mi Tienda guardados con éxito!");
     } catch {
-      toast.error("No pudimos guardar los datos del local");
+      toast.error("No pudimos guardar los datos de Mi Tienda");
     } finally {
       setBusy(false);
     }
@@ -753,7 +792,7 @@ function StoreProfileTab({
           <Store className="size-6" />
         </span>
         <div>
-          <h2 className="text-xl font-bold">Configuración de tu Comercio</h2>
+          <h2 className="text-xl font-bold">Mi Tienda — Configuración del Comercio</h2>
           <p className="text-xs text-muted-foreground">
             Estos datos serán visibles para los compradores en cada producto de tu tienda.
           </p>
@@ -761,7 +800,6 @@ function StoreProfileTab({
       </div>
 
       <form onSubmit={handleSaveStoreData} className="space-y-5">
-        {/* Logo del Comercio */}
         <div>
           <Label className="text-xs font-semibold">Logo del Comercio</Label>
           <div className="mt-2 flex items-center gap-4">
@@ -786,7 +824,6 @@ function StoreProfileTab({
           </div>
         </div>
 
-        {/* Nombre de la Tienda / Local */}
         <div className="space-y-1.5">
           <Label htmlFor="store-name" className="text-xs font-semibold">
             Nombre del Local o Negocio *
@@ -801,7 +838,6 @@ function StoreProfileTab({
           />
         </div>
 
-        {/* WhatsApp */}
         <div className="space-y-1.5">
           <Label htmlFor="store-whatsapp" className="text-xs font-semibold">
             WhatsApp para pedidos de clientes *
@@ -810,7 +846,7 @@ function StoreProfileTab({
             id="store-whatsapp"
             name="whatsapp"
             defaultValue={profile?.whatsapp ?? ""}
-            placeholder="5491155550101 (con código de país)"
+            placeholder="5492615550101 (con código de país)"
             required
             className="h-11"
           />
@@ -819,7 +855,6 @@ function StoreProfileTab({
           </p>
         </div>
 
-        {/* Responsable */}
         <div className="space-y-1.5">
           <Label htmlFor="store-owner" className="text-xs font-semibold">
             Nombre del titular o responsable *
@@ -834,7 +869,6 @@ function StoreProfileTab({
           />
         </div>
 
-        {/* Ubicación / Ciudad */}
         <div className="space-y-1.5">
           <Label htmlFor="store-city" className="text-xs font-semibold">
             Ciudad / Ubicación del local
@@ -851,7 +885,7 @@ function StoreProfileTab({
         <div className="pt-2">
           <Button type="submit" variant="cta" size="lg" className="h-11 w-full sm:w-auto" disabled={busy || logoOptimizing}>
             {busy ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
-            Guardar datos del local
+            Guardar datos de Mi Tienda
           </Button>
         </div>
       </form>
