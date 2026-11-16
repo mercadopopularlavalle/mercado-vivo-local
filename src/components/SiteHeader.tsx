@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutList, LogOut, Plus, ShieldCheck, Store, UserRound } from "lucide-react";
+import { LogIn, LogOut, Plus, ShieldCheck, Store, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,33 +32,41 @@ export function SiteHeader() {
     (user?.user_metadata?.["full_name"] as string | undefined) ?? user?.email?.split("@")[0] ?? "";
 
   return (
-    <header className="sticky top-0 z-40 bg-primary text-primary-foreground shadow-md">
-      <div className="mx-auto flex min-h-[4.5rem] sm:min-h-[5rem] max-w-6xl items-center gap-3 px-4 py-2">
-        <Logo />
-        <nav className="ml-auto flex items-center gap-2">
-          <Link
-            to="/mis-publicaciones"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground sm:inline-flex items-center gap-1.5"
-            activeProps={{ className: "bg-primary-foreground/10 text-primary-foreground" }}
+    <header className="sticky top-0 z-40 w-full overflow-x-hidden bg-primary text-primary-foreground shadow-md">
+      <div className="mx-auto flex min-h-[4rem] sm:min-h-[5rem] max-w-6xl items-center justify-between gap-1.5 sm:gap-3 px-2.5 sm:px-4 py-2">
+        <div className="min-w-0 shrink">
+          <Logo />
+        </div>
+
+        <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Button
+            asChild
+            variant="cta"
+            size="sm"
+            className="h-8 sm:h-9 px-2.5 sm:px-3.5 text-xs sm:text-sm whitespace-nowrap"
           >
-            <Store className="size-4" />
-            <span>Administrar mi Tienda</span>
-          </Link>
-          <Button asChild variant="cta">
             <Link to="/publicar">
-              <Plus />
-              <span>Publicar venta</span>
+              <Plus className="size-3.5 sm:size-4 shrink-0" />
+              <span>Publicar</span>
+              <span className="hidden sm:inline">venta</span>
             </Link>
           </Button>
+
           {!loading && !user && (
             <Button
               asChild
-              variant="ghost"
-              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              variant="outline"
+              size="sm"
+              className="h-8 sm:h-9 border-primary-foreground/40 bg-primary-foreground/15 px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground whitespace-nowrap"
             >
-              <Link to="/auth">Ingresar</Link>
+              <Link to="/auth" search={{ role: "buyer" } as any}>
+                <LogIn className="size-3.5 sm:size-4 shrink-0" />
+                <span>Ingreso</span>
+                <span className="hidden md:inline">Compradores</span>
+              </Link>
             </Button>
           )}
+
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -66,9 +74,9 @@ export function SiteHeader() {
                   variant="ghost"
                   size="icon"
                   aria-label="Mi cuenta"
-                  className="rounded-full bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
+                  className="size-8 sm:size-9 shrink-0 rounded-full bg-primary-foreground/15 text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground"
                 >
-                  <UserRound />
+                  <UserRound className="size-4 sm:size-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -76,7 +84,7 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/mis-publicaciones">
-                    <Store className="size-4" /> Administrar mi Tienda
+                    <Store className="size-4" /> Publicaciones de Vendedores
                   </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
