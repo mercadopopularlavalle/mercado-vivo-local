@@ -56,4 +56,24 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/mis-publicaciones">
-                    <Store className="size-4
+                    <Store className="size-4" /> Publicaciones de Vendedores
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">
+                      <ShieldCheck className="size-4" /> Panel de administración
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => void handleSignOut()}>
+                  <LogOut className="size-4" /> Cerrar sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+        )}
+      </div>
+    </header>
+  );
+}
