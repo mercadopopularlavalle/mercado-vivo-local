@@ -107,7 +107,7 @@ function PublishForm({
       return;
     }
 
-    setBusy(true);
+   setBusy(true);
     try {
       const phone = normalizeWhatsapp(whatsapp);
       if (phone !== profile?.whatsapp || (!profile?.city && location)) {
@@ -118,29 +118,41 @@ function PublishForm({
 
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
-
       const isFlash = !canPublishRegular ? true : soloPorHoy;
 
-      const insertPayload: Record<string, any> = {
+      const basePayload = {
         ...parsed.data,
         user_id: user.id,
         image_url,
         image_url_2,
       };
 
-      if (isFlash) {
-        insertPayload["is_flash_today"] = true;
-        insertPayload["expires_at"] = endOfDay.toISOString();
-      }
+      const fullPayload: Record<string, any> = isFlash
+        ? { ...basePayload, is_flash_today: true, expires_at: endOfDay.toISOString() }
+        : basePayload;
 
-      const { data: created, error } = await supabase
+      let { data: created, error } = await supabase
         .from("listings")
-        .insert(insertPayload as any)
+        .insert(fullPayload as any)
         .select("id")
         .single();
+
+      // Si faltan las columnas is_flash_today / expires_at en la tabla, reintenta con los campos base
+      if (error && isFlash && (error.code === "PGRST204" || error.message?.includes("column"))) {
+        const retry = await supabase
+          .from("listings")
+          .insert(basePayload as any)
+          .select("id")
+          .single();
+        created = retry.data;
+        error = retry.error;
+      }
+
       if (error) {
         await removeStoredPhotos(uploaded);
-        throw error;
+        console.error("Error Supabase al publicar:", error);
+        toast.error(`Error al publicar: ${error.message}`);
+        return;
       }
 
       await queryClient.invalidateQueries();
@@ -149,8 +161,13 @@ function PublishForm({
           ? "¡Publicado en Solo por hoy! Estará visible hasta el final del día (23:59 hs)."
           : "¡Tu aviso ya está publicado!",
       );
-      navigate({ to: "/aviso/$id", params: { id: created.id } });
-    } catch (err) {
+      navigate({ to: "/aviso/$id", params: { id: created!.id } });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "No pudimos publicar el aviso. Probá de nuevo.");
+    } finally {
+      setBusy(false);
+    } (err) {
       console.error(err);
       toast.error("No pudimos publicar el aviso. Probá de nuevo.");
     } finally {
