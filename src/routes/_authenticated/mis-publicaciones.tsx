@@ -579,8 +579,8 @@ function AddProductModal({
       };
 
       if (soloPorHoy) {
-        payload.is_flash_today = true;
-        payload.expires_at = endOfDay.toISOString();
+        payload["is_flash_today"] = true;
+        payload["expires_at"] = endOfDay.toISOString();
       }
 
       const { error: insertErr } = await supabase.from("listings").insert(payload as any);

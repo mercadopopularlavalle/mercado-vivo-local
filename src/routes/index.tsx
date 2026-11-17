@@ -4,6 +4,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { ChevronRight, Flame, LayoutGrid, PackageSearch, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListingCard } from "@/components/ListingCard";
+import { UsefulContacts } from "@/components/UsefulContacts";
 import { CATEGORIES, categoryLabel, isCategorySlug, type CategorySlug } from "@/lib/categories";
 import { listingsQuery } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -142,45 +143,51 @@ function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-6">
-        <div className="mb-5 flex items-baseline justify-between gap-4">
-          <h2 className="text-2xl font-bold">
-            {hoy ? "⚡ Solo por hoy (usados y ocasionales)" : cat ? categoryLabel(cat) : "Publicaciones recientes"}
-            {q && <span className="font-sans text-base font-normal text-muted-foreground"> · “{q}”</span>}
-          </h2>
-          <span className="shrink-0 text-sm text-muted-foreground">
-            {visibleListings.length} {visibleListings.length === 1 ? "aviso" : "avisos"}
-          </span>
-        </div>
-
-        {visibleListings.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-card px-6 py-16 text-center">
-            <PackageSearch className="size-10 text-muted-foreground" />
-            <p className="font-display text-lg font-bold">
-              {hoy ? "No hay publicaciones de Solo por hoy en este momento" : "No encontramos avisos"}
-            </p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {hoy
-                ? "¿Tenés algo usado o para vender hoy sin suscribirte? Publicalo en Solo por hoy (dura hasta el final del día)."
-                : "Probá con otra búsqueda o categoría. ¿Tenés algo para vender? Publicalo gratis."}
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Button asChild variant="outline">
-                <Link to="/" search={{}}>
-                  Ver todo
-                </Link>
-              </Button>
-              <Button asChild variant="cta">
-                <Link to="/publicar">Publicar venta</Link>
-              </Button>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+          <div className="min-w-0 flex-1">
+            <div className="mb-5 flex items-baseline justify-between gap-4">
+              <h2 className="text-2xl font-bold">
+                {hoy ? "⚡ Solo por hoy (usados y ocasionales)" : cat ? categoryLabel(cat) : "Publicaciones recientes"}
+                {q && <span className="font-sans text-base font-normal text-muted-foreground"> · “{q}”</span>}
+              </h2>
+              <span className="shrink-0 text-sm text-muted-foreground">
+                {visibleListings.length} {visibleListings.length === 1 ? "aviso" : "avisos"}
+              </span>
             </div>
+
+            {visibleListings.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-card px-6 py-16 text-center">
+                <PackageSearch className="size-10 text-muted-foreground" />
+                <p className="font-display text-lg font-bold">
+                  {hoy ? "No hay publicaciones de Solo por hoy en este momento" : "No encontramos avisos"}
+                </p>
+                <p className="max-w-sm text-sm text-muted-foreground">
+                  {hoy
+                    ? "¿Tenés algo usado o para vender hoy sin suscribirte? Publicalo en Solo por hoy (dura hasta el final del día)."
+                    : "Probá con otra búsqueda o categoría. ¿Tenés algo para vender? Publicalo gratis."}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Button asChild variant="outline">
+                    <Link to="/" search={{}}>
+                      Ver todo
+                    </Link>
+                  </Button>
+                  <Button asChild variant="cta">
+                    <Link to="/publicar">Publicar venta</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
+                {visibleListings.map((l) => (
+                  <ListingCard key={l.id} listing={l} />
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {visibleListings.map((l) => (
-              <ListingCard key={l.id} listing={l} />
-            ))}
-          </div>
-        )}
+
+          <UsefulContacts />
+        </div>
       </section>
     </div>
   );

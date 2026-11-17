@@ -129,8 +129,8 @@ function PublishForm({
       };
 
       if (isFlash) {
-        insertPayload.is_flash_today = true;
-        insertPayload.expires_at = endOfDay.toISOString();
+        insertPayload["is_flash_today"] = true;
+        insertPayload["expires_at"] = endOfDay.toISOString();
       }
 
       const { data: created, error } = await supabase
