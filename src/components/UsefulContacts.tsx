@@ -17,10 +17,10 @@ export function UsefulContacts() {
   return (
     <aside
       aria-label="Teléfonos útiles y contacto para reclamos"
-      className="w-full shrink-0 space-y-4 lg:sticky lg:top-[5.5rem] lg:w-72 lg:self-start xl:w-80"
+      className="w-full shrink-0 space-y-4 lg:order-first lg:sticky lg:top-[5.5rem] lg:w-60 lg:self-start xl:w-64"
     >
       <section className="overflow-hidden rounded-2xl border bg-card shadow-card">
-        <header className="flex items-center gap-2 bg-primary px-4 py-3 text-primary-foreground">
+        <header className="flex items-center gap-2 bg-primary px-3 py-2.5 text-primary-foreground">
           <Phone className="size-4 shrink-0" />
           <h2 className="font-display text-base font-bold">Teléfonos útiles</h2>
         </header>
@@ -31,10 +31,10 @@ export function UsefulContacts() {
               <li key={item.id}>
                 <a
                   href={telHref(item.phone)}
-                  className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-primary-soft"
+                  className="flex items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-primary-soft"
                 >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
-                    <Icon className="size-4" />
+                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
+                    <Icon className="size-3.5" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-medium leading-snug text-foreground">
@@ -52,21 +52,21 @@ export function UsefulContacts() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border bg-card shadow-card">
-        <header className="flex items-center gap-2 bg-primary px-4 py-3 text-primary-foreground">
+        <header className="flex items-center gap-2 bg-primary px-3 py-2.5 text-primary-foreground">
           <Mail className="size-4 shrink-0" />
           <h2 className="font-display text-base font-bold">Reclamos y sugerencias</h2>
         </header>
-        <div className="p-4">
-          <p className="text-xs leading-relaxed text-muted-foreground">
+        <div className="p-3">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
             Escribinos para hacer un reclamo, sugerir una mejora o avisarnos algo sobre tu
             publicación.
           </p>
           <a
             href={`mailto:${CLAIMS_EMAIL}`}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-cta px-3 py-2.5 text-sm font-semibold text-cta-foreground transition-opacity hover:opacity-90"
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-cta px-2 py-2 text-[11px] font-semibold text-cta-foreground transition-opacity hover:opacity-90"
           >
-            <Mail className="size-4 shrink-0" />
-            <span className="truncate">{CLAIMS_EMAIL}</span>
+            <Mail className="size-3.5 shrink-0" />
+            <span className="break-all leading-tight">{CLAIMS_EMAIL}</span>
           </a>
         </div>
       </section>
