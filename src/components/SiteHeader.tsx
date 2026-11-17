@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogIn, LogOut, ShieldCheck, Store, UserRound } from "lucide-react";
+import { LogOut, ShieldCheck, Store, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import { isAdminQuery } from "@/lib/my-data";
 import { Logo } from "./Logo";
 
 export function SiteHeader() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: isAdmin } = useQuery({ ...isAdminQuery(user?.id ?? ""), enabled: !!user });
@@ -38,22 +38,8 @@ export function SiteHeader() {
           <Logo />
         </div>
 
-        <nav className="flex shrink-0 items-center gap-2">
-          {!loading && !user && (
-            <Button
-              asChild
-              variant="cta"
-              size="sm"
-              className="h-9 px-3.5 sm:px-4 text-xs sm:text-sm font-semibold whitespace-nowrap"
-            >
-              <Link to="/auth">
-                <LogIn className="size-4 shrink-0" />
-                <span>Ingreso</span>
-              </Link>
-            </Button>
-          )}
-
-          {user && (
+        {user && (
+          <nav className="flex shrink-0 items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -70,24 +56,4 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/mis-publicaciones">
-                    <Store className="size-4" /> Publicaciones de Vendedores
-                  </Link>
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin">
-                      <ShieldCheck className="size-4" /> Panel de administración
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onSelect={() => void handleSignOut()}>
-                  <LogOut className="size-4" /> Cerrar sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </nav>
-      </div>
-    </header>
-  );
-}
+                    <Store className="size-4
