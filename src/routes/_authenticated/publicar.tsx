@@ -85,7 +85,6 @@ function PublishForm({
   const [photos, setPhotos] = useState<PhotoSlot[]>([]);
   const [optimizing, setOptimizing] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Si no tiene suscripción y ya venció la promo, por defecto publica en "Solo por hoy"
   const [soloPorHoy, setSoloPorHoy] = useState(!canPublishRegular);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -107,7 +106,7 @@ function PublishForm({
       return;
     }
 
-   setBusy(true);
+    setBusy(true);
     try {
       const phone = normalizeWhatsapp(whatsapp);
       if (phone !== profile?.whatsapp || (!profile?.city && location)) {
@@ -137,7 +136,6 @@ function PublishForm({
         .select("id")
         .single();
 
-      // Si faltan las columnas is_flash_today / expires_at en la tabla, reintenta con los campos base
       if (error && isFlash && (error.code === "PGRST204" || error.message?.includes("column"))) {
         const retry = await supabase
           .from("listings")
@@ -165,11 +163,6 @@ function PublishForm({
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "No pudimos publicar el aviso. Probá de nuevo.");
-    } finally {
-      setBusy(false);
-    } (err) {
-      console.error(err);
-      toast.error("No pudimos publicar el aviso. Probá de nuevo.");
     } finally {
       setBusy(false);
     }
