@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogIn, LogOut, Plus, ShieldCheck, Store, UserRound } from "lucide-react";
+import { LogIn, LogOut, ShieldCheck, Store, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -33,36 +33,22 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 w-full overflow-x-hidden bg-primary text-primary-foreground shadow-md">
-      <div className="mx-auto flex min-h-[4rem] sm:min-h-[5rem] max-w-6xl items-center justify-between gap-1.5 sm:gap-3 px-2.5 sm:px-4 py-2">
+      <div className="mx-auto flex min-h-[4rem] sm:min-h-[5rem] max-w-6xl items-center justify-between gap-2 px-3 sm:px-4 py-2">
         <div className="min-w-0 shrink">
           <Logo />
         </div>
 
-        <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Button
-            asChild
-            variant="cta"
-            size="sm"
-            className="h-8 sm:h-9 px-2.5 sm:px-3.5 text-xs sm:text-sm whitespace-nowrap"
-          >
-            <Link to="/publicar">
-              <Plus className="size-3.5 sm:size-4 shrink-0" />
-              <span>Publicar</span>
-              <span className="hidden sm:inline">venta</span>
-            </Link>
-          </Button>
-
+        <nav className="flex shrink-0 items-center gap-2">
           {!loading && !user && (
             <Button
               asChild
-              variant="outline"
+              variant="cta"
               size="sm"
-              className="h-8 sm:h-9 border-primary-foreground/40 bg-primary-foreground/15 px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground whitespace-nowrap"
+              className="h-9 px-3.5 sm:px-4 text-xs sm:text-sm font-semibold whitespace-nowrap"
             >
-              <Link to="/auth" search={{ redirect: undefined }}>
-                <LogIn className="size-3.5 sm:size-4 shrink-0" />
+              <Link to="/auth">
+                <LogIn className="size-4 shrink-0" />
                 <span>Ingreso</span>
-                <span className="hidden md:inline">Vendedores</span>
               </Link>
             </Button>
           )}
@@ -74,9 +60,9 @@ export function SiteHeader() {
                   variant="ghost"
                   size="icon"
                   aria-label="Mi cuenta"
-                  className="size-8 sm:size-9 shrink-0 rounded-full bg-primary-foreground/15 text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground"
+                  className="size-9 shrink-0 rounded-full bg-primary-foreground/15 text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground"
                 >
-                  <UserRound className="size-4 sm:size-5" />
+                  <UserRound className="size-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -84,7 +70,7 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/mis-publicaciones">
-                    <Store className="size-4" /> Mi tienda
+                    <Store className="size-4" /> Publicaciones de Vendedores
                   </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
