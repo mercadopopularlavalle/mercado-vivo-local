@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -125,19 +126,23 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // The welcome screen at / is a full-screen chooser with its own logo.
+  const isWelcome = useRouterState({ select: (s) => s.location.pathname === "/" });
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <div className="flex min-h-screen flex-col">
-          <SiteHeader />
+          {!isWelcome && <SiteHeader />}
           <main className="flex-1">
             {/* Required: nested routes render here. */}
             <Outlet />
           </main>
+          {!isWelcome && (
           <footer className="border-t py-8 text-center text-sm text-muted-foreground">
             Mercado Popular · Compraventa local entre vecinos
           </footer>
+          )}
         </div>
         <Toaster richColors position="top-center" />
       </AuthProvider>

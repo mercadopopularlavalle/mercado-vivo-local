@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ComprarRouteImport } from './routes/comprar'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as VenderRouteImport } from './routes/vender'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedMisPublicacionesRouteImport } from './routes/_authenticated/mis-publicaciones'
 import { Route as AuthenticatedPublicarRouteImport } from './routes/_authenticated/publicar'
@@ -32,9 +34,19 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComprarRoute = ComprarRouteImport.update({
+  id: '/comprar',
+  path: '/comprar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VenderRoute = VenderRouteImport.update({
+  id: '/vender',
+  path: '/vender',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -62,7 +74,9 @@ const AvisoIdRoute = AvisoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/comprar': typeof ComprarRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/vender': typeof VenderRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/mis-publicaciones': typeof AuthenticatedMisPublicacionesRoute
   '/publicar': typeof AuthenticatedPublicarRoute
@@ -71,7 +85,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/comprar': typeof ComprarRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/vender': typeof VenderRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/mis-publicaciones': typeof AuthenticatedMisPublicacionesRoute
   '/publicar': typeof AuthenticatedPublicarRoute
@@ -82,7 +98,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/comprar': typeof ComprarRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/vender': typeof VenderRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/mis-publicaciones': typeof AuthenticatedMisPublicacionesRoute
   '/_authenticated/publicar': typeof AuthenticatedPublicarRoute
@@ -93,7 +111,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/comprar'
     | '/reset-password'
+    | '/vender'
     | '/admin'
     | '/mis-publicaciones'
     | '/publicar'
@@ -102,7 +122,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/comprar'
     | '/reset-password'
+    | '/vender'
     | '/admin'
     | '/mis-publicaciones'
     | '/publicar'
@@ -112,7 +134,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/comprar'
     | '/reset-password'
+    | '/vender'
     | '/_authenticated/admin'
     | '/_authenticated/mis-publicaciones'
     | '/_authenticated/publicar'
@@ -123,7 +147,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ComprarRoute: typeof ComprarRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  VenderRoute: typeof VenderRoute
   AvisoIdRoute: typeof AvisoIdRoute
 }
 
@@ -150,11 +176,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/comprar': {
+      id: '/comprar'
+      path: '/comprar'
+      fullPath: '/comprar'
+      preLoaderRoute: typeof ComprarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vender': {
+      id: '/vender'
+      path: '/vender'
+      fullPath: '/vender'
+      preLoaderRoute: typeof VenderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -207,7 +247,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ComprarRoute: ComprarRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  VenderRoute: VenderRoute,
   AvisoIdRoute: AvisoIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -35,5 +35,6 @@ use the editor.
 - Listing photos live in a private storage bucket and are shown via signed URLs; `image_url` (cover) and `image_url_2` hold either a bucket path or a `/images/seed/...` public path, and every upload goes through `src/lib/image-optimize.ts` + `ListingPhotosPicker` first — the workspace blocks public buckets and two fixed columns cap photos per listing in the schema.
 - Seller profiles use plain UUID ids (no FK to auth users) so demo sellers can exist; a signup trigger creates the profile for real users.
 - Protected pages live under `src/routes/_authenticated/` (client-only gate redirecting to `/auth`).
+- `/` is a full-screen buyer/seller chooser (site header and footer hidden there); the public marketplace lives at `/comprar` and the seller hub at `/vender` — back links from listings go to `/comprar`, not `/`.
 - Roles live in `user_roles` checked via `has_role()` and are granted/revoked only through admin-checked security-definer RPCs (no self-revoke, never zero admins); seller `is_active` on profiles is changeable only by admins (DB trigger) and gates public listing visibility and listing inserts in RLS — enforcement stays in the database, not the UI.
 - Subscription payment link and admin WhatsApp live in the single-row `app_settings` table, edited from /admin — no code change needed to update them.

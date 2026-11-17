@@ -15,3 +15,21 @@ describe("App routing", () => {
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
 });
+
+describe("Entry flow", () => {
+  const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+  it("opens the welcome chooser at /", () => {
+    expect(router.matchRoutes("/").at(-1)?.routeId).toBe("/");
+  });
+
+  it("lets buyers browse at /comprar without the sign-in gate", () => {
+    const ids = router.matchRoutes("/comprar").map((m) => m.routeId);
+    expect(ids.at(-1)).toBe("/comprar");
+    expect(ids).not.toContain("/_authenticated");
+  });
+
+  it("gives sellers a /vender page with publish and store options", () => {
+    expect(router.matchRoutes("/vender").at(-1)?.routeId).toBe("/vender");
+  });
+});

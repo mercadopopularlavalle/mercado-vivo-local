@@ -7,3 +7,4 @@
 - [x] Lateral column on the home page: Teléfonos útiles (4 numbers, tap to call) + Reclamos y sugerencias (email)
 - [x] Column placement confirmed by the user: home page only, no other pages
 - [x] Move the lateral column to the left side and make it narrower
+- [x] Welcome screen at / with logo, slogan, "Quiero comprar" (→ /comprar, no sign-in) and "Quiero vender" (→ /vender: Publicar venta + Mi tienda); shown on every visit

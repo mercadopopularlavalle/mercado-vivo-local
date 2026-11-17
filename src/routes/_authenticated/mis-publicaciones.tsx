@@ -192,7 +192,7 @@ function ManageStorePage() {
             </Button>
           )}
           <Button asChild variant="soft" size="sm" className="rounded-xl">
-            <Link to="/" search={{ q: storeName }}>
+            <Link to="/comprar" search={{ q: storeName }}>
               Ver mi tienda en vivo
             </Link>
           </Button>

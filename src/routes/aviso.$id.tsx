@@ -47,11 +47,11 @@ function ListingPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <div className="mb-5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <Link to="/" search={{}} className="inline-flex items-center gap-1 hover:text-foreground">
+        <Link to="/comprar" search={{}} className="inline-flex items-center gap-1 hover:text-foreground">
           <ArrowLeft className="size-4" /> Volver
         </Link>
         <span>·</span>
-        <Link to="/" search={{ cat }} className="hover:text-foreground">
+        <Link to="/comprar" search={{ cat }} className="hover:text-foreground">
           {categoryLabel(listing.category)}
         </Link>
       </div>

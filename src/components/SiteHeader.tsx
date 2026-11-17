@@ -59,10 +59,10 @@ export function SiteHeader() {
               size="sm"
               className="h-8 sm:h-9 border-primary-foreground/40 bg-primary-foreground/15 px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground whitespace-nowrap"
             >
-              <Link to="/auth" search={{ role: "buyer" } as any}>
+              <Link to="/auth" search={{ redirect: undefined }}>
                 <LogIn className="size-3.5 sm:size-4 shrink-0" />
                 <span>Ingreso</span>
-                <span className="hidden md:inline">Compradores</span>
+                <span className="hidden md:inline">Vendedores</span>
               </Link>
             </Button>
           )}
@@ -84,7 +84,7 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/mis-publicaciones">
-                    <Store className="size-4" /> Publicaciones de Vendedores
+                    <Store className="size-4" /> Mi tienda
                   </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
