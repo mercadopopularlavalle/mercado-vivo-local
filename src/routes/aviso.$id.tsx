@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, ImageOff, MapPin, MessageCircle, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CalendarDays, ImageOff, MapPin, Maximize2, MessageCircle, ShieldCheck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { categoryLabel, isCategorySlug } from "@/lib/categories";
 import { buildWhatsappLink, formatDate, formatPrice } from "@/lib/format";
 import { listingQuery } from "@/lib/queries";
@@ -136,12 +137,24 @@ function ListingPage() {
 
 function PhotoGallery({ urls, title }: { urls: string[]; title: string }) {
   const [active, setActive] = useState(0);
-  const current = urls[Math.min(active, urls.length - 1)];
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const index = Math.min(active, urls.length - 1);
+  const current = urls[index];
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-hidden rounded-3xl border bg-muted">
         {current ? (
-          <img src={current} alt={title} width={944} height={720} className="aspect-[4/3] size-full object-cover" />
+          <button
+            type="button"
+            onClick={() => setViewerOpen(true)}
+            className="group relative block w-full cursor-zoom-in"
+            aria-label="Ver foto en grande"
+          >
+            <img src={current} alt={title} width={944} height={720} className="aspect-[4/3] size-full object-cover" />
+            <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-card/90 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition-colors group-hover:bg-card">
+              <Maximize2 className="size-3.5" /> Ver en grande
+            </span>
+          </button>
         ) : (
           <div className="grid aspect-[4/3] place-items-center text-muted-foreground">
             <ImageOff className="size-10" />
@@ -166,6 +179,7 @@ function PhotoGallery({ urls, title }: { urls: string[]; title: string }) {
           ))}
         </div>
       )}
+      <PhotoLightbox urls={urls} startIndex={index} open={viewerOpen} onOpenChange={setViewerOpen} title={title} />
     </div>
   );
 }

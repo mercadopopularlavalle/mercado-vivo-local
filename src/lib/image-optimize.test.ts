@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeUnderLimit, fitWithin, MAX_IMAGE_BYTES, MAX_IMAGE_SIDE } from "./image-optimize";
+import { encodeUnderLimit, fitWithin, MAX_IMAGE_BYTES, MAX_IMAGE_SIDE, rotatedSize, clampCrop } from "./image-optimize";
 
 describe("photo resizing", () => {
   it("limits a landscape photo's longest side to 1080px keeping proportions", () => {
@@ -30,5 +30,26 @@ describe("photo compression", () => {
     const { blob, width } = await encodeUnderLimit(fakeEncoder(0.5), 4000, 3000);
     expect(blob.size).toBeLessThanOrEqual(MAX_IMAGE_BYTES);
     expect(width).toBe(1080);
+  });
+});
+
+describe("photo rotation", () => {
+  it("turning a landscape photo once makes it portrait", () => {
+    expect(rotatedSize(1080, 810, 1)).toEqual({ width: 810, height: 1080 });
+  });
+
+  it("turning a photo twice keeps its shape", () => {
+    expect(rotatedSize(1080, 810, 2)).toEqual({ width: 1080, height: 810 });
+  });
+});
+
+describe("photo cropping", () => {
+  it("keeps a crop that goes past the edge inside the photo", () => {
+    expect(clampCrop({ x: 900, y: -10, width: 400, height: 300 }, 1080, 810)).toEqual({
+      x: 900,
+      y: 0,
+      width: 180,
+      height: 300,
+    });
   });
 });

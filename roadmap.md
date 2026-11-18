@@ -9,3 +9,5 @@
 - [x] Move the lateral column to the left side and make it narrower
 - [x] Welcome screen at / with logo, slogan, "Quiero comprar" (→ /comprar, no sign-in) and "Quiero vender" (→ /vender: Publicar venta + Mi tienda); shown on every visit
 - [x] Fix "new row violates row-level security" when publishing (free promo + Solo por hoy allowed in the database)
+- [ ] Tap a photo to see it full size (listing page + photo picker)
+- [ ] Edit photos while uploading: change, rotate, crop, remove, choose cover
