@@ -40,9 +40,11 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          expires_at: string | null
           id: string
           image_url: string | null
           image_url_2: string | null
+          is_flash_today: boolean
           location: string
           price: number
           status: string
@@ -54,9 +56,11 @@ export type Database = {
           category: string
           created_at?: string
           description?: string
+          expires_at?: string | null
           id?: string
           image_url?: string | null
           image_url_2?: string | null
+          is_flash_today?: boolean
           location: string
           price: number
           status?: string
@@ -68,9 +72,11 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          expires_at?: string | null
           id?: string
           image_url?: string | null
           image_url_2?: string | null
+          is_flash_today?: boolean
           location?: string
           price?: number
           status?: string
@@ -173,6 +179,9 @@ export type Database = {
         }[]
       }
       admin_revoke_admin: { Args: { _user_id: string }; Returns: undefined }
+      can_publish_regular: { Args: { _user_id: string }; Returns: boolean }
+      end_of_today_ar: { Args: never; Returns: string }
+      free_promo_ends_at: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -181,6 +190,15 @@ export type Database = {
         Returns: boolean
       }
       is_active_seller: { Args: { _user_id: string }; Returns: boolean }
+      listing_is_public: {
+        Args: {
+          _expires_at: string
+          _is_flash: boolean
+          _status: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "seller"

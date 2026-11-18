@@ -50,6 +50,13 @@
       "when": 1794845126185,
       "tag": "0006_listing_second_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795033414407,
+      "tag": "0007_free_promo_and_solo_por_hoy",
+      "breakpoints": true
     }
   ]
 }

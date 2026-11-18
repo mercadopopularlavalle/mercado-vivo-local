@@ -13,6 +13,9 @@ export type ListingSummary = {
   location: string;
   imageUrl: string | null;
   createdAt: string;
+  /** "Solo por hoy" listing that disappears at the end of the day. */
+  isFlashToday: boolean;
+  expiresAt: string | null;
 };
 
 export type ListingDetail = ListingSummary & {
@@ -35,7 +38,7 @@ export const listListings = createServerFn({ method: "GET" })
     const supabase = createPublicServerClient();
     let query = supabase
       .from("listings")
-      .select("id, title, price, category, location, image_url, created_at")
+      .select("id, title, price, category, location, image_url, created_at, is_flash_today, expires_at")
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(60);
@@ -64,6 +67,8 @@ export const listListings = createServerFn({ method: "GET" })
       location: r.location,
       imageUrl: urls[i] ?? null,
       createdAt: r.created_at,
+      isFlashToday: r.is_flash_today,
+      expiresAt: r.expires_at,
     }));
   });
 
@@ -74,7 +79,7 @@ export const getListing = createServerFn({ method: "GET" })
     const { data: row, error } = await supabase
       .from("listings")
       .select(
-        "id, title, description, price, category, location, image_url, image_url_2, created_at, profiles(display_name, store_name, whatsapp, city)",
+        "id, title, description, price, category, location, image_url, image_url_2, created_at, is_flash_today, expires_at, profiles(display_name, store_name, whatsapp, city)",
       )
       .eq("id", data.id)
       .eq("status", "active")
@@ -100,6 +105,8 @@ export const getListing = createServerFn({ method: "GET" })
       imageUrl: imageUrls[0] ?? null,
       imageUrls,
       createdAt: row.created_at,
+      isFlashToday: row.is_flash_today,
+      expiresAt: row.expires_at,
       seller: {
         name: profile?.display_name ?? "Vendedor",
         store: profile?.store_name ?? null,

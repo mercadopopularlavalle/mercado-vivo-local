@@ -49,13 +49,13 @@ function Home() {
   useEffect(() => setTerm(q ?? ""), [q]);
 
   // Filtrado en vivo para "Solo por hoy" (muestra los activos del día y oculta los vencidos)
-  const visibleListings = listings.filter((item: any) => {
+  const visibleListings = listings.filter((item) => {
     const now = new Date();
-    if (item.expires_at && new Date(item.expires_at) <= now) {
+    if (item.expiresAt && new Date(item.expiresAt) <= now) {
       return false;
     }
     if (hoy) {
-      return Boolean(item.is_flash_today);
+      return item.isFlashToday;
     }
     return true;
   });
