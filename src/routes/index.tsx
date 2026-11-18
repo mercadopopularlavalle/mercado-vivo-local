@@ -8,12 +8,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Bienvenido a Mercado Popular, la compraventa local de Lavalle. Elegí si querés comprar sin registrarte o vender con tu propia tienda.",
+          "Bienvenido a Mercado Popular, la compraventa local de Lavalle. Elegí si querés comprar o vender con tu propia tienda.",
       },
       { property: "og:title", content: "Mercado Popular — Los negocios de Lavalle en un solo lugar" },
       {
         property: "og:description",
-        content: "Comprá sin registrarte o vendé con tu tienda en la compraventa local de Lavalle.",
+        content: "Comprá o vendé con tu tienda en la compraventa local de Lavalle.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -43,7 +43,7 @@ function Welcome() {
             to="/comprar"
             icon={ShoppingBag}
             label="Quiero comprar"
-            hint="Mirá productos y servicios sin registrarte"
+            hint="Mirá productos, servicios y guardá tus 🤩 Esto me gusta"
             className="bg-card text-foreground"
             iconClass="bg-primary-soft text-primary"
           />
@@ -56,6 +56,14 @@ function Welcome() {
             iconClass="bg-primary-foreground/20 text-cta-foreground"
           />
         </div>
+
+        <Link
+          to="/auth"
+          search={{ role: "buyer" }}
+          className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-4 py-2 text-xs font-semibold text-primary-foreground backdrop-blur transition-colors hover:bg-primary-foreground/25"
+        >
+          <span>🤩</span> Mis "Esto me gusta" / Cuenta Comprador
+        </Link>
       </div>
     </div>
   );
