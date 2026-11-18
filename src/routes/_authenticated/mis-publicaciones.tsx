@@ -17,6 +17,9 @@ import {
   Store,
   Trash2,
   Upload,
+  share2,
+  sparkles,
+  store,  
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -193,7 +196,20 @@ function ManageStorePage() {
           )}
           <Button asChild variant="soft" size="sm" className="rounded-xl">
             <Link to="/comprar" search={{ q: storeName }}>
-              Ver mi tienda en vivo
+              Ver mi tienda en vivo <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl gap-1.5"
+            onClick={() => {
+              const storeUrl = `${window.location.origin}/comprar?q=${encodeURIComponent(storeName)}`;
+              void navigator.clipboard.writeText(storeUrl);
+              toast.success("¡Enlace de tu tienda copiado! Ya podés pegarlo en WhatsApp o redes.");
+            }}
+          >
+            <Share2 className="size-4" />
+            Compartir enlace de Mi Tienda
+          </Button>
             </Link>
           </Button>
         </div>
