@@ -13,6 +13,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { installStaleAssetRecovery, isChunkLoadError, reloadOnceForStaleAssets } from "../lib/chunk-reload";
+
+installStaleAssetRecovery();
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -43,6 +46,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
+    // A stale tab after a new publish: reload once to pick up the new files.
+    if (isChunkLoadError(error) && reloadOnceForStaleAssets()) return;
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
