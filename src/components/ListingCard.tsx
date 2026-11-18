@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ImageOff, MapPin } from "lucide-react";
+import { ImageOff } from "lucide-react";
 import { toast } from "sonner";
 import { categoryLabel } from "@/lib/categories";
 import { formatPrice } from "@/lib/format";
@@ -112,24 +112,6 @@ export function ListingCard({ listing }: { listing: ListingSummary }) {
         <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur">
           {categoryLabel(listing.category)}
         </span>
-
-        <button
-          type="button"
-          onClick={handleToggleLike}
-          disabled={busy}
-          title={isLiked ? "Quitar de Esto me gusta" : "Esto me gusta"}
-          aria-label="Esto me gusta"
-          className={`absolute right-3 top-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold shadow-md backdrop-blur transition-transform active:scale-95 ${
-            isLiked
-              ? "bg-amber-400 text-amber-950 ring-2 ring-amber-500"
-              : "bg-card/90 text-foreground hover:bg-card"
-          }`}
-        >
-          <span className="text-base leading-none" role="img" aria-label="Carita con ojos de estrella">
-            🤩
-          </span>
-          <span>{isLiked ? "¡Me gusta!" : "Esto me gusta"}</span>
-        </button>
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-4">
@@ -139,11 +121,25 @@ export function ListingCard({ listing }: { listing: ListingSummary }) {
         <h3 className="line-clamp-2 font-sans text-sm font-medium leading-snug tracking-normal text-foreground/85">
           {listing.title}
         </h3>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-muted-foreground">
-          <span className="flex min-w-0 items-center gap-1">
-            <MapPin className="size-3.5 shrink-0" />
-            <span className="truncate">{listing.location}</span>
-          </span>
+
+        <div className="mt-auto pt-3">
+          <button
+            type="button"
+            onClick={handleToggleLike}
+            disabled={busy}
+            title={isLiked ? "Quitar de Esto me gusta" : "Esto me gusta"}
+            aria-label="Esto me gusta"
+            className={`flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-95 ${
+              isLiked
+                ? "bg-amber-400 text-amber-950 ring-2 ring-amber-500 shadow-sm"
+                : "border border-border bg-muted/60 text-foreground hover:bg-muted"
+            }`}
+          >
+            <span className="text-base leading-none" role="img" aria-label="Carita con ojos de estrella">
+              🤩
+            </span>
+            <span>{isLiked ? "¡Me gusta!" : "Esto me gusta"}</span>
+          </button>
         </div>
       </div>
     </Link>
