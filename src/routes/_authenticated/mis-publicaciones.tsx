@@ -147,7 +147,6 @@ function ManageStorePage() {
         </div>
       )}
 
-      {/* Cabecera de Publicaciones de Vendedores con acceso directo a Mi Tienda */}
       <div className="mb-8 flex flex-col gap-4 rounded-3xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-primary/10 text-primary">
@@ -221,7 +220,6 @@ function ManageStorePage() {
         </div>
       </div>
 
-      {/* Pestañas dentro de Publicaciones de Vendedores: Mis Publicaciones & Mi Tienda */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="inventario" className="flex items-center gap-2">
@@ -248,10 +246,6 @@ function ManageStorePage() {
     </div>
   );
 }
-
-/* =========================================================================
-   PESTAÑA DE INVENTARIO (TABLA LIMPIA CON EDICIÓN DIRECTA)
-   ========================================================================= */
 
 type EditableItem = {
   price: number;
@@ -540,13 +534,7 @@ function InventoryTab({
       />
     </div>
   );
-}
-
-/* =========================================================================
-   MODAL DE AGREGAR PRODUCTO (INCLUYE OPCIÓN "SOLO POR HOY")
-   ========================================================================= */
-
-function AddProductModal({
+}function AddProductModal({
   open,
   onOpenChange,
   userId,
@@ -653,7 +641,40 @@ function AddProductModal({
               <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
             </div>
           </div>
-<div className="space-y-1.5">
+
+          <div className="space-y-1.5">
+            <Label htmlFor="prod-title" className="text-xs font-semibold">
+              Nombre del producto *
+            </Label>
+            <Input id="prod-title" name="title" placeholder="Ej: Caña de pescar, Pan Casero" required className="h-10" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Categoría *</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="prod-price" className="text-xs font-semibold">
+                Precio (ARS) *
+              </Label>
+              <Input id="prod-price" name="price" type="number" min={0} placeholder="1500" required className="h-10" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="prod-stock" className="text-xs font-semibold">
               Cantidad en stock *
             </Label>
@@ -698,37 +719,141 @@ function AddProductModal({
     </Dialog>
   );
 }
-          >Categoría *</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.slug} value={cat.slug}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="prod-price" className="text-xs font-semibold">
-                Precio (ARS) *
-              </Label>
-              <Input id="prod-price" name="price" type="number" min={0} placeholder="1500" required className="h-10" />
+function StoreProfileTab({
+  profile,
+  userId,
+  userEmail,
+}: {
+  profile: any;
+  userId: string;
+  userEmail: string;
+}) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(profile?.logo_url || null);
+  const [logoOptimizing, setLogoOptimizing] = useState(false);
+
+  async function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setLogoOptimizing(true);
+    try {
+      const optimized = await optimizeImage(f);
+      setLogoFile(optimized);
+      setLogoPreview(URL.createObjectURL(optimized));
+    } catch (err) {
+      toast.error(err instanceof ImageOptimizeError ? err.message : "No pudimos optimizar la imagen");
+    } finally {
+      setLogoOptimizing(false);
+    }
+  }
+
+  async function handleSaveStoreData(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const store = String(form.get("store") ?? "").trim();
+    const name = String(form.get("name") ?? "").trim();
+    const whatsapp = String(form.get("whatsapp") ?? "").trim();
+    const city = String(form.get("city") ?? "").trim();
+
+    if (!name) {
+      toast.error("Ingresá el nombre del titular o responsable");
+      return;
+    }
+    if (whatsapp && !isValidWhatsapp(whatsapp)) {
+      toast.error("WhatsApp inválido: usá código de país, ej. 5492615550101");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      let logoUrl = profile?.logo_url || null;
+
+      if (logoFile) {
+        const path = `${userId}/logo_${Date.now()}.${extensionFor(logoFile)}`;
+        const { error: uploadErr } = await supabase.storage
+          .from(LISTING_BUCKET)
+          .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
+        if (!uploadErr) {
+          const { data: urlData } = supabase.storage.from(LISTING_BUCKET).getPublicUrl(path);
+          logoUrl = urlData.publicUrl;
+        }
+      }
+
+      await saveMyProfile(userId, {
+        store_name: store || null,
+        display_name: name.slice(0, 80),
+        whatsapp: whatsapp ? normalizeWhatsapp(whatsapp) : null,
+        city: city || null,
+        logo_url: logoUrl,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["my-profile", userId] });
+      toast.success("¡Datos de Mi Tienda guardados con éxito!");
+    } catch {
+      toast.error("No pudimos guardar los datos de Mi Tienda");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="max-w-2xl rounded-3xl border bg-card p-6 shadow-sm sm:p-8">
+      <div className="mb-6 flex items-center gap-3">
+        <span className="grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground shadow-sm">
+          <Store className="size-6" />
+        </span>
+        <div>
+          <h2 className="text-xl font-bold">Mi Tienda — Configuración del Comercio</h2>
+          <p className="text-xs text-muted-foreground">
+            Estos datos serán visibles para los compradores en cada producto de tu tienda.
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSaveStoreData} className="space-y-5">
+        <div>
+          <Label className="text-xs font-semibold">Logo del Comercio</Label>
+          <div className="mt-2 flex items-center gap-4">
+            <div className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-dashed bg-muted">
+              {logoOptimizing ? (
+                <Loader2 className="size-6 animate-spin text-primary" />
+              ) : logoPreview ? (
+                <img src={logoPreview} alt="Logo" className="size-full object-cover" />
+              ) : (
+                <Store className="size-8 text-muted-foreground opacity-60" />
+              )}
+            </div>
+            <div>
+              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-accent">
+                <Upload className="size-4" /> {logoOptimizing ? "Optimizando imagen..." : "Subir logo o foto del local"}
+                <input type="file" accept="image/*" className="sr-only" onChange={onLogoChange} disabled={logoOptimizing} />
+              </label>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Recomendado: imagen cuadrada (PNG o JPG) de al menos 400x400 px.
+              </p>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="prod-stock" className="text-xs font-semibold">
-              Cantidad en stock *
-            </Label>
-            <Input id="prod-stock" name="stock" type="number" min={0} defaultValue={1} required className="h-10" />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="store-name" className="text-xs font-semibold">
+            Nombre del Local o Negocio *
+          </Label>
+          <Input
+            id="store-name"
+            name="store"
+            defaultValue={profile?.store_name ?? ""}
+            placeholder="Ej: Panadería La Unión, Ferretería El Puente"
+            required
+            className="h-11"
+          />
+        </div>
 
-   <div className="space-y-1.5">
+        <div className="space-y-1.5">
           <Label htmlFor="owner-name" className="text-xs font-semibold">
             Nombre del titular o responsable *
           </Label>
@@ -907,4 +1032,4 @@ function DeleteListingDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}      
+}
