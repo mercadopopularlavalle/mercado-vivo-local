@@ -536,24 +536,7 @@ function InventoryTab({
 }
 
 function AddProductModal({
-  open,
-  onOpenChange,
-  userId,
-  defaultLocation,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  userId: string;
-  defaultLocation: string;
-}) {
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
-  const [optimizing, setOptimizing] = useState(false);
-  const [category, setCategory] = useState<string>("hogar");
-  const [soloPorHoy, setSoloPorHoy] = useState(false);
-
-  async function handleAddProduct(e: FormEvent<HTMLFormElement>) {
+   async function handleAddProduct(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const title = String(form.get("title") ?? "").trim();
@@ -564,6 +547,14 @@ function AddProductModal({
     if (!title || title.length < 3) {
       toast.error("El nombre del producto debe tener al menos 3 caracteres");
       return;
+    }onOpenChange(false);
+      setPhotos([]);
+      setSoloPorHoy(false);
+    } catch (err: any) {
+      const detail = err?.message || err?.details || "Error desconocido al guardar";
+      toast.error(`No se pudo agregar: ${detail}`);
+    } finally {
+      setBusy(false);
     }
     if (isNaN(price) || price < 0) {
       toast.error("Ingresá un precio válido");
