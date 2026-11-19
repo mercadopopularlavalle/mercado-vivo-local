@@ -246,7 +246,6 @@ function ManageStorePage() {
     </div>
   );
 }
-
 type EditableItem = {
   price: number;
   stock: number;
@@ -534,7 +533,9 @@ function InventoryTab({
       />
     </div>
   );
-}function AddProductModal({
+}
+
+function AddProductModal({
   open,
   onOpenChange,
   userId,
