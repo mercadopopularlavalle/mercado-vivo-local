@@ -693,183 +693,7 @@ function AddProductModal({
             <Input id="prod-stock" name="stock" type="number" min={0} defaultValue={1} required className="h-10" />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="prod-desc" className="text-xs font-semibold">
-              Descripción breve
-            </Label>
-            <Input id="prod-desc" name="description" placeholder="Detalles, estado, talle..." className="h-10" />
-          </div>
-
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-50/70 p-3 text-xs dark:bg-amber-950/30">
-            <input
-              type="checkbox"
-              checked={soloPorHoy}
-              onChange={(e) => setSoloPorHoy(e.target.checked)}
-              className="mt-0.5 size-4 accent-amber-600"
-            />
-            <div>
-              <span className="flex items-center gap-1 font-bold text-amber-900 dark:text-amber-200">
-                <Flame className="size-3.5 text-amber-600" /> Publicar en "Solo por hoy" (usados u ocasionales)
-              </span>
-              <span className="mt-0.5 block text-amber-800/80 dark:text-amber-300/80">
-                No requiere suscripción y se elimina automáticamente al terminar el día (23:59 hs).
-              </span>
-            </div>
-          </label>
-
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="cta" disabled={busy || optimizing}>
-              {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
-              {optimizing ? "Optimizando imagen..." : busy ? "Subiendo..." : "Publicar e ingresar"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* =========================================================================
-   PESTAÑA 2: MI TIENDA (NOMBRE, LOGO, WHATSAPP, UBICACIÓN)
-   ========================================================================= */
-
-function StoreProfileTab({
-  profile,
-  userId,
-  userEmail,
-}: {
-  profile: any;
-  userId: string;
-  userEmail: string;
-}) {
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(profile?.logo_url || null);
-  const [logoOptimizing, setLogoOptimizing] = useState(false);
-
-  async function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    setLogoOptimizing(true);
-    try {
-      const optimized = await optimizeImage(f);
-      setLogoFile(optimized);
-      setLogoPreview(URL.createObjectURL(optimized));
-    } catch (err) {
-      toast.error(err instanceof ImageOptimizeError ? err.message : "No pudimos optimizar la imagen");
-    } finally {
-      setLogoOptimizing(false);
-    }
-  }
-
-  async function handleSaveStoreData(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const store = String(form.get("store") ?? "").trim();
-    const name = String(form.get("name") ?? "").trim();
-    const whatsapp = String(form.get("whatsapp") ?? "").trim();
-    const city = String(form.get("city") ?? "").trim();
-
-    if (!name) {
-      toast.error("Ingresá el nombre del titular o responsable");
-      return;
-    }
-    if (whatsapp && !isValidWhatsapp(whatsapp)) {
-      toast.error("WhatsApp inválido: usá código de país, ej. 5492615550101");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      let logoUrl = profile?.logo_url || null;
-
-      if (logoFile) {
-        const path = `${userId}/logo_${Date.now()}.${extensionFor(logoFile)}`;
-        const { error: uploadErr } = await supabase.storage
-          .from(LISTING_BUCKET)
-          .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
-        if (!uploadErr) {
-          const { data: urlData } = supabase.storage.from(LISTING_BUCKET).getPublicUrl(path);
-          logoUrl = urlData.publicUrl;
-        }
-      }
-
-      await saveMyProfile(userId, {
-        store_name: store || null,
-        display_name: name.slice(0, 80),
-        whatsapp: whatsapp ? normalizeWhatsapp(whatsapp) : null,
-        city: city || null,
-        logo_url: logoUrl,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["my-profile", userId] });
-      toast.success("¡Datos de Mi Tienda guardados con éxito!");
-    } catch {
-      toast.error("No pudimos guardar los datos de Mi Tienda");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="max-w-2xl rounded-3xl border bg-card p-6 shadow-sm sm:p-8">
-      <div className="mb-6 flex items-center gap-3">
-        <span className="grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground shadow-sm">
-          <Store className="size-6" />
-        </span>
-        <div>
-          <h2 className="text-xl font-bold">Mi Tienda — Configuración del Comercio</h2>
-          <p className="text-xs text-muted-foreground">
-            Estos datos serán visibles para los compradores en cada producto de tu tienda.
-          </p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSaveStoreData} className="space-y-5">
-        <div>
-          <Label className="text-xs font-semibold">Logo del Comercio</Label>
-          <div className="mt-2 flex items-center gap-4">
-            <div className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-dashed bg-muted">
-              {logoOptimizing ? (
-                <Loader2 className="size-6 animate-spin text-primary" />
-              ) : logoPreview ? (
-                <img src={logoPreview} alt="Logo" className="size-full object-cover" />
-              ) : (
-                <Store className="size-8 text-muted-foreground opacity-60" />
-              )}
-            </div>
-            <div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-accent">
-                <Upload className="size-4" /> {logoOptimizing ? "Optimizando imagen..." : "Subir logo o foto del local"}
-                <input type="file" accept="image/*" className="sr-only" onChange={onLogoChange} disabled={logoOptimizing} />
-              </label>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Recomendado: imagen cuadrada (PNG o JPG) de al menos 400x400 px.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="store-name" className="text-xs font-semibold">
-            Nombre del Local o Negocio *
-          </Label>
-          <Input
-            id="store-name"
-            name="store"
-            defaultValue={profile?.store_name ?? ""}
-            placeholder="Ej: Panadería La Unión, Ferretería El Puente"
-            required
-            className="h-11"
-          />
-        </div>
-
-        <div className="space-y-1.5">
+   <div className="space-y-1.5">
           <Label htmlFor="owner-name" className="text-xs font-semibold">
             Nombre del titular o responsable *
           </Label>
@@ -921,9 +745,131 @@ function StoreProfileTab({
   );
 }
 
-/* =========================================================================
-   DIÁLOGOS DE EDITAR FOTOS Y ELIMINAR PUBLICACIÓN
-   ========================================================================= */
-
 function EditPhotosDialog({
-  listing
+  listing,
+  userId,
+  disabled,
+}: {
+  listing: MyListing;
+  userId: string;
+  disabled?: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [photos, setPhotos] = useState<PhotoSlot[]>(() => slotsFromListing(listing));
+  const [busy, setBusy] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+
+  async function handleSavePhotos() {
+    setBusy(true);
+    try {
+      const { image_url, image_url_2 } = await uploadListingPhotos(userId, photos);
+      const { error } = await supabase
+        .from("listings")
+        .update({ image_url, image_url_2 })
+        .eq("id", listing.id)
+        .eq("user_id", userId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["listings"] });
+      toast.success("Fotos actualizadas");
+      setOpen(false);
+    } catch {
+      toast.error("No pudimos actualizar las fotos");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="size-8" disabled={disabled} title="Editar fotos">
+          <Camera className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Fotos de {listing.title}</DialogTitle>
+          <DialogDescription>Subí o reemplazá las imágenes del producto.</DialogDescription>
+        </DialogHeader>
+        <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="cta" disabled={busy || optimizing} onClick={() => void handleSavePhotos()}>
+            {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
+            Guardar fotos
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteListingDialog({
+  listingId,
+  title,
+  imagePaths,
+  userId,
+}: {
+  listingId: string;
+  title: string;
+  imagePaths: string[];
+  userId: string;
+}) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+
+  async function handleDelete() {
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("listings")
+        .delete()
+        .eq("id", listingId)
+        .eq("user_id", userId);
+      if (error) throw error;
+      if (imagePaths.length > 0) {
+        await removeStoredPhotos(imagePaths);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["listings"] });
+      toast.success(`"${title}" eliminado`);
+    } catch {
+      toast.error("No pudimos eliminar el producto");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-8 text-muted-foreground hover:text-destructive"
+          title="Eliminar publicación"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Eliminar "{title}"?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción borrará la publicación de Mercado Popular y no se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => void handleDelete()} disabled={busy}>
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}      
