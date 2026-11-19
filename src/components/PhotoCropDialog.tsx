@@ -12,6 +12,7 @@ const SHAPES = [
   { label: "Cuadrada", aspect: 1 },
   { label: "Vertical", aspect: 3 / 4 },
 ];
+const DEFAULT_ASPECT = 4 / 3;
 
 export function PhotoCropDialog({
   imageUrl,
@@ -26,7 +27,7 @@ export function PhotoCropDialog({
 }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [aspect, setAspect] = useState(SHAPES[0].aspect);
+  const [aspect, setAspect] = useState(DEFAULT_ASPECT);
   const [area, setArea] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -34,7 +35,7 @@ export function PhotoCropDialog({
     if (!o) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
-      setAspect(SHAPES[0].aspect);
+      setAspect(DEFAULT_ASPECT);
       setArea(null);
     }
     onOpenChange(o);
@@ -93,7 +94,7 @@ export function PhotoCropDialog({
 
         <label className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
           Zoom
-          <Slider value={[zoom]} min={1} max={4} step={0.05} onValueChange={([z]) => setZoom(z)} aria-label="Zoom" />
+          <Slider value={[zoom]} min={1} max={4} step={0.05} onValueChange={([z]) => setZoom(z ?? 1)} aria-label="Zoom" />
         </label>
 
         <DialogFooter className="gap-2">
