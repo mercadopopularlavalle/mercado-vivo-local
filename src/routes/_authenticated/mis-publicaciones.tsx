@@ -649,7 +649,7 @@ function AddProductModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {CATEGORIES.map((cat) => (import { CATEGORIES, CATEGORY_SLUGS, categoryLabel } from "@/lib/categories";
                     <SelectItem key={cat.slug} value={cat.slug}>
                       {cat.label}
                     </SelectItem>
