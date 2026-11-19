@@ -536,7 +536,25 @@ function InventoryTab({
 }
 
 function AddProductModal({
-   async function handleAddProduct(e: FormEvent<HTMLFormElement>) {
+function AddProductModal({
+  open,
+  onOpenChange,
+  userId,
+  defaultLocation,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
+  defaultLocation: string;
+}) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
+  const [optimizing, setOptimizing] = useState(false);
+  const [category, setCategory] = useState<string>(CATEGORY_SLUGS[0] ?? "hogar");
+  const [soloPorHoy, setSoloPorHoy] = useState(false);
+
+  async function handleAddProduct(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const title = String(form.get("title") ?? "").trim();
@@ -547,13 +565,172 @@ function AddProductModal({
     if (!title || title.length < 3) {
       toast.error("El nombre del producto debe tener al menos 3 caracteres");
       return;
-    }onOpenChange(false);
+    }
+    if (isNaN(price) || price < 0) {
+      toast.error("Ingresá un precio válido");
+      return;
+    }
+    if (!category) {
+      toast.error("Elegí una categoría");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const { image_url, image_url_2, uploaded } = await uploadListingPhotos(userId, photos);
+      const finalDesc = updateDescriptionWithStock(description, stock);
+
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const basePayload: Record<string, any> = {
+        user_id: userId,
+        title,
+        price: Math.round(price),
+        category,
+        location: defaultLocation || "Lavalle",
+        description: finalDesc,
+        image_url,
+        image_url_2,
+      };
+
+      const fullPayload = soloPorHoy
+        ? { ...basePayload, is_flash_today: true, expires_at: endOfDay.toISOString() }
+        : basePayload;
+
+      let { error: insertErr } = await supabase
+        .from("listings")
+        .insert(fullPayload as any)
+        .select("id")
+        .single();
+
+      if (insertErr && soloPorHoy && (insertErr.code === "PGRST204" || insertErr.message?.includes("column"))) {
+        const retry = await supabase
+          .from("listings")
+          .insert(basePayload as any)
+          .select("id")
+          .single();
+        insertErr = retry.error;
+      }
+
+      if (insertErr) {
+        await removeStoredPhotos(uploaded);
+        toast.error(`Error al publicar: ${insertErr.message}`);
+        return;
+      }
+
+      toast.success(
+        soloPorHoy
+          ? "Publicado en Solo por hoy (se borrará al terminar el día)"
+          : "Producto agregado a tus publicaciones",
+      );
+      await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["listings"] });
+      onOpenChange(false);
       setPhotos([]);
       setSoloPorHoy(false);
     } catch (err: any) {
-      const detail = err?.message || err?.details || "Error desconocido al guardar";
-      toast.error(`No se pudo agregar: ${detail}`);
+      toast.error(err?.message || "No se pudo agregar el producto");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Agregar producto</DialogTitle>
+          <DialogDescription>
+            Completá los datos para publicarlo en Mercado Popular.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleAddProduct} className="space-y-4">
+          <div>
+            <Label className="text-xs font-semibold">Fotos del producto</Label>
+            <div className="mt-1.5">
+              <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="prod-title" className="text-xs font-semibold">
+              Nombre del producto *
+            </Label>
+            <Input id="prod-title" name="title" placeholder="Ej: Caña de pescar, Pan Casero" required className="h-10" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Categoría *</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Elegí una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="prod-price" className="text-xs font-semibold">
+                Precio (ARS) *
+              </Label>
+              <Input id="prod-price" name="price" type="number" min={0} placeholder="1500" required className="h-10" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="prod-stock" className="text-xs font-semibold">
+              Cantidad en stock *
+            </Label>
+            <Input id="prod-stock" name="stock" type="number" min={0} defaultValue={1} required className="h-10" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="prod-desc" className="text-xs font-semibold">
+              Descripción breve
+            </Label>
+            <Input id="prod-desc" name="description" placeholder="Detalles, estado, talle..." className="h-10" />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-50/70 p-3 text-xs dark:bg-amber-950/30">
+            <input
+              type="checkbox"
+              checked={soloPorHoy}
+              onChange={(e) => setSoloPorHoy(e.target.checked)}
+              className="mt-0.5 size-4 accent-amber-600"
+            />
+            <div>
+              <span className="flex items-center gap-1 font-bold text-amber-900 dark:text-amber-200">
+                <Flame className="size-3.5 text-amber-600" /> Publicar en "Solo por hoy" (usados u ocasionales)
+              </span>
+              <span className="mt-0.5 block text-amber-800/80 dark:text-amber-300/80">
+                No requiere suscripción y se elimina automáticamente al terminar el día (23:59 hs).
+              </span>
+            </div>
+          </label>
+
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="cta" disabled={busy || optimizing}>
+              {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
+              {optimizing ? "Optimizando imagen..." : busy ? "Subiendo..." : "Publicar e ingresar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
       setBusy(false);
     }
     if (isNaN(price) || price < 0) {
