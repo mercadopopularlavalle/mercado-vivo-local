@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   Building2,
@@ -13,13 +13,11 @@ import {
   Package,
   PackagePlus,
   Save,
+  Share2,
   Sparkles,
   Store,
   Trash2,
   Upload,
-  share2,
-  sparkles,
-  store,  
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -86,19 +84,23 @@ import {
 } from "@/lib/my-data";
 import { cn } from "@/lib/utils";
 
-// Promoción lanzamiento: uso gratuito para nuevos vendedores hasta el 15 de diciembre
 export function isFreePromoActive(): boolean {
   const deadline = new Date("2026-12-15T23:59:59-03:00");
   return new Date() <= deadline;
 }
 
 export const Route = createFileRoute("/_authenticated/mis-publicaciones")({
-  loader: ({ context }) =>
-    Promise.all([
-      context.queryClient.ensureQueryData(myListingsQuery(context.user.id)),
-      context.queryClient.ensureQueryData(myProfileQuery(context.user.id)),
-      context.queryClient.ensureQueryData(appSettingsQuery()),
-    ]),
+  loader: async ({ context }) => {
+    try {
+      await Promise.allSettled([
+        context.queryClient.ensureQueryData(myListingsQuery(context.user.id)),
+        context.queryClient.ensureQueryData(myProfileQuery(context.user.id)),
+        context.queryClient.ensureQueryData(appSettingsQuery()),
+      ]);
+    } catch {
+      // No bloquear la carga si alguna consulta demora
+    }
+  },
   head: () => ({
     meta: [
       { title: "Publicaciones de Vendedores y Mi Tienda — Mercado Popular" },
@@ -114,12 +116,15 @@ export const Route = createFileRoute("/_authenticated/mis-publicaciones")({
 
 function ManageStorePage() {
   const { user } = Route.useRouteContext();
-  const { data: listings } = useSuspenseQuery(myListingsQuery(user.id));
-  const { data: profile } = useSuspenseQuery(myProfileQuery(user.id));
+  const { data: listings = [] } = useQuery(myListingsQuery(user.id));
+  const { data: profile = null } = useQuery(myProfileQuery(user.id));
   const promoActive = isFreePromoActive();
   const hasSubscription = profile?.is_active ?? false;
   const storeActive = hasSubscription || promoActive;
-  const storeName = profile?.store_name || "Mi Tienda";
+  const storeName =
+    profile?.store_name ||
+    (user.user_metadata?.store_name as string | undefined) ||
+    "Mi Tienda";
   const [activeTab, setActiveTab] = useState("inventario");
 
   return (
@@ -196,7 +201,10 @@ function ManageStorePage() {
           )}
           <Button asChild variant="soft" size="sm" className="rounded-xl">
             <Link to="/comprar" search={{ q: storeName }}>
-              Ver mi tienda en vivo <Button
+              Ver mi tienda en vivo
+            </Link>
+          </Button>
+          <Button
             type="button"
             variant="outline"
             size="sm"
@@ -209,8 +217,6 @@ function ManageStorePage() {
           >
             <Share2 className="size-4" />
             Compartir enlace de Mi Tienda
-          </Button>
-            </Link>
           </Button>
         </div>
       </div>
@@ -226,14 +232,17 @@ function ManageStorePage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* PESTAÑA 1: PUBLICACIONES / INVENTARIO */}
         <TabsContent value="inventario" className="space-y-6">
-          <InventoryTab listings={listings} userId={user.id} storeActive={storeActive} defaultLocation={profile?.city || "Lavalle"} />
+          <InventoryTab
+            listings={listings}
+            userId={user.id}
+            storeActive={storeActive}
+            defaultLocation={profile?.city || "Lavalle"}
+          />
         </TabsContent>
 
-        {/* PESTAÑA 2: MI TIENDA (DATOS DEL LOCAL) */}
         <TabsContent value="local">
-          <StoreProfileTab profile={profile} userId={user.id} />
+          <StoreProfileTab profile={profile} userId={user.id} userEmail={user.email ?? ""} />
         </TabsContent>
       </Tabs>
     </div>
@@ -582,7 +591,7 @@ function AddProductModal({
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
 
-      const payload: Record<string, any> = {
+      const basePayload: Record<string, any> = {
         user_id: userId,
         title,
         price: Math.round(price),
@@ -594,12 +603,16 @@ function AddProductModal({
         status,
       };
 
-      if (soloPorHoy) {
-        payload["is_flash_today"] = true;
-        payload["expires_at"] = endOfDay.toISOString();
-      }
+      const fullPayload = soloPorHoy
+        ? { ...basePayload, is_flash_today: true, expires_at: endOfDay.toISOString() }
+        : basePayload;
 
-      const { error: insertErr } = await supabase.from("listings").insert(payload as any);
+      let { error: insertErr } = await supabase.from("listings").insert(fullPayload as any);
+
+      if (insertErr && soloPorHoy && (insertErr.code === "PGRST204" || insertErr.message?.includes("column"))) {
+        const retry = await supabase.from("listings").insert(basePayload as any);
+        insertErr = retry.error;
+      }
 
       if (insertErr) {
         await removeStoredPhotos(uploaded);
@@ -726,9 +739,11 @@ function AddProductModal({
 function StoreProfileTab({
   profile,
   userId,
+  userEmail,
 }: {
   profile: any;
   userId: string;
+  userEmail: string;
 }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -855,195 +870,60 @@ function StoreProfileTab({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="store-whatsapp" className="text-xs font-semibold">
-            WhatsApp para pedidos de clientes *
-          </Label>
-          <Input
-            id="store-whatsapp"
-            name="whatsapp"
-            defaultValue={profile?.whatsapp ?? ""}
-            placeholder="5492615550101 (con código de país)"
-            required
-            className="h-11"
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Los clientes harán click en "Contactar por WhatsApp" y enviarán el pedido directo a este número.
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="store-owner" className="text-xs font-semibold">
+          <Label htmlFor="owner-name" className="text-xs font-semibold">
             Nombre del titular o responsable *
           </Label>
           <Input
-            id="store-owner"
+            id="owner-name"
             name="name"
-            defaultValue={profile?.display_name ?? ""}
+            defaultValue={profile?.display_name ?? userEmail.split("@")[0] ?? ""}
             placeholder="Tu nombre y apellido"
             required
             className="h-11"
           />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="store-city" className="text-xs font-semibold">
-            Ciudad / Ubicación del local
-          </Label>
-          <Input
-            id="store-city"
-            name="city"
-            defaultValue={profile?.city ?? ""}
-            placeholder="Ej: Lavalle, Mendoza"
-            className="h-11"
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="store-whatsapp" className="text-xs font-semibold">
+              WhatsApp del comercio
+            </Label>
+            <Input
+              id="store-whatsapp"
+              name="whatsapp"
+              defaultValue={profile?.whatsapp ?? ""}
+              placeholder="5492615550101"
+              inputMode="tel"
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="store-city" className="text-xs font-semibold">
+              Localidad / Dirección
+            </Label>
+            <Input
+              id="store-city"
+              name="city"
+              defaultValue={profile?.city ?? "Lavalle"}
+              placeholder="Ej: Villa Tulumaya, Lavalle"
+              className="h-11"
+            />
+          </div>
         </div>
 
-        <div className="pt-2">
-          <Button type="submit" variant="cta" size="lg" className="h-11 w-full sm:w-auto" disabled={busy || logoOptimizing}>
-            {busy ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
-            Guardar datos de Mi Tienda
-          </Button>
-        </div>
+        <Button type="submit" variant="cta" className="h-11 w-full gap-2" disabled={busy || logoOptimizing}>
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          Guardar datos de Mi Tienda
+        </Button>
       </form>
     </div>
   );
 }
 
 /* =========================================================================
-   DIÁLOGO PARA CAMBIAR FOTOS (HASTA 2, OPTIMIZADAS)
+   DIÁLOGOS DE EDITAR FOTOS Y ELIMINAR PUBLICACIÓN
    ========================================================================= */
 
 function EditPhotosDialog({
-  listing,
-  userId,
-  disabled,
-}: {
-  listing: MyListing;
-  userId: string;
-  disabled: boolean;
-}) {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
-  const [optimizing, setOptimizing] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  function onOpenChange(next: boolean) {
-    if (busy || optimizing) return;
-    if (next) setPhotos(slotsFromListing(listing.imagePaths, listing.imageUrls));
-    setOpen(next);
-  }
-
-  async function save() {
-    setBusy(true);
-    try {
-      const { image_url, image_url_2, uploaded } = await uploadListingPhotos(userId, photos);
-      const { error } = await supabase
-        .from("listings")
-        .update({ image_url, image_url_2 })
-        .eq("id", listing.id);
-      if (error) {
-        await removeStoredPhotos(uploaded);
-        throw error;
-      }
-      const stillUsed = new Set([image_url, image_url_2]);
-      await removeStoredPhotos(listing.imagePaths.filter((p) => !stillUsed.has(p)));
-      await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
-      await queryClient.invalidateQueries({ queryKey: ["listings"] });
-      await queryClient.invalidateQueries({ queryKey: ["listing", listing.id] });
-      toast.success("Fotos actualizadas");
-      setOpen(false);
-    } catch {
-      toast.error("No pudimos guardar las fotos. Probá de nuevo.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="ghost" className="h-8 gap-1 px-2 text-xs" disabled={disabled} title="Cambiar foto">
-          <Camera className="size-4" />
-          <span className="hidden xl:inline">Cambiar foto</span>
-          <span className="sr-only xl:hidden">Cambiar foto</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Cambiar foto</DialogTitle>
-          <DialogDescription>“{listing.title}” · hasta 2 fotos. La primera es la portada.</DialogDescription>
-        </DialogHeader>
-        <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy || optimizing}>
-            Cancelar
-          </Button>
-          <Button type="button" variant="cta" onClick={save} disabled={busy || optimizing}>
-            {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
-            {optimizing ? "Optimizando imagen..." : busy ? "Subiendo..." : "Guardar fotos"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* =========================================================================
-   DIÁLOGO DE ELIMINACIÓN
-   ========================================================================= */
-
-function DeleteListingDialog({
-  listingId,
-  title,
-  imagePaths,
-  userId,
-}: {
-  listingId: string;
-  title: string;
-  imagePaths: Array<string | null>;
-  userId: string;
-}) {
-  const queryClient = useQueryClient();
-
-  const remove = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("listings").delete().eq("id", listingId);
-      if (error) throw error;
-      await removeStoredPhotos(imagePaths);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
-      await queryClient.invalidateQueries({ queryKey: ["listings"] });
-      toast.success("Producto eliminado del inventario");
-    },
-    onError: () => toast.error("No pudimos eliminar el producto"),
-  });
-
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive">
-          <Trash2 className="size-4" />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar este producto?</AlertDialogTitle>
-          <AlertDialogDescription>
-            “{title}” se borrará permanentemente del inventario y del catálogo.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => remove.mutate()}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            Eliminar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
+  listing
