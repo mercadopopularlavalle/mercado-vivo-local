@@ -653,17 +653,52 @@ function AddProductModal({
               <ListingPhotosPicker photos={photos} onChange={setPhotos} onBusyChange={setOptimizing} disabled={busy} />
             </div>
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="prod-title" className="text-xs font-semibold">
-              Nombre del producto *
+<div className="space-y-1.5">
+            <Label htmlFor="prod-stock" className="text-xs font-semibold">
+              Cantidad en stock *
             </Label>
-            <Input id="prod-title" name="title" placeholder="Ej: Caña de pescar, Pan Casero" required className="h-10" />
+            <Input id="prod-stock" name="stock" type="number" min={0} defaultValue={1} required className="h-10" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Categoría *</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="prod-desc" className="text-xs font-semibold">
+              Descripción breve
+            </Label>
+            <Input id="prod-desc" name="description" placeholder="Detalles, estado, talle..." className="h-10" />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-50/70 p-3 text-xs dark:bg-amber-950/30">
+            <input
+              type="checkbox"
+              checked={soloPorHoy}
+              onChange={(e) => setSoloPorHoy(e.target.checked)}
+              className="mt-0.5 size-4 accent-amber-600"
+            />
+            <div>
+              <span className="flex items-center gap-1 font-bold text-amber-900 dark:text-amber-200">
+                <Flame className="size-3.5 text-amber-600" /> Publicar en "Solo por hoy" (usados u ocasionales)
+              </span>
+              <span className="mt-0.5 block text-amber-800/80 dark:text-amber-300/80">
+                No requiere suscripción y se elimina automáticamente al terminar el día (23:59 hs).
+              </span>
+            </div>
+          </label>
+
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="cta" disabled={busy || optimizing}>
+              {(busy || optimizing) && <Loader2 className="size-4 animate-spin" />}
+              {optimizing ? "Optimizando imagen..." : busy ? "Subiendo..." : "Publicar e ingresar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+          >Categoría *</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-10">
                   <SelectValue />
